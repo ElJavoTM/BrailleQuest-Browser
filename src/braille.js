@@ -29,6 +29,20 @@ export const LEVELS = [
   { id: 3, name: 'Costa de las Mareas', letters: [...'uvxyz'] },
 ];
 
+// Grupos para el calentamiento.
+export const GROUPS = [
+  { id: 'serie1', name: 'Serie 1', desc: 'a–j · solo puntos 1, 2, 4 y 5', letters: [...'abcdefghij'] },
+  { id: 'serie2', name: 'Serie 2', desc: 'k–t · la serie 1 + el punto 3', letters: [...'klmnopqrst'] },
+  { id: 'serie3', name: 'Serie 3', desc: 'u v x y z · a–e + los puntos 3 y 6', letters: [...'uvxyz'] },
+  { id: 'espanol', name: 'Propias del español', desc: 'ñ y w', letters: ['ñ', 'w'] },
+];
+
+export const ALL_LETTERS = GROUPS.flatMap((group) => group.letters);
+
+export function groupOf(letter) {
+  return GROUPS.find((group) => group.letters.includes(letter)) ?? null;
+}
+
 export function maskFromDots(dots) {
   return dots.reduce((mask, dot) => mask | (1 << (dot - 1)), 0);
 }

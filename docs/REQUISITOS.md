@@ -62,6 +62,12 @@ Un RPG corto y rejugable en el que **leer y escribir braille es la mecánica pri
 - **RF-07** Los errores castigan poco: el fallo da una pista y reintento inmediato, la letra baja **solo una caja** del repaso espaciado y el combo se queda **a la mitad** (no a cero).
 - **RF-08** **Revancha tras un fallo**: la letra fallada vuelve **2 veces más** en la sesión, con 2 turnos de otras letras entre medias. Tiene prioridad sobre las letras nuevas. Fallar otra vez reinicia sus 2 rondas (no se acumulan).
 
+### 4.1b Menú y modos
+- **RF-09** **Menú inicial** con los modos de juego, navegable con flechas, números, `Enter` o ratón. `Esc` o el botón *Menú* vuelven a él desde cualquier modo.
+  - **Aventura**: la sesión de 3 combates (RF-10 a RF-16).
+  - **Calentamiento**: sin puntuación ni efecto en el progreso. Se elige un grupo (*Mis letras*, Serie 1 a–j, Serie 2 k–t, Serie 3 u–z, ñ/w o *Todas*), se dibuja **cualquier celda** y el juego dice **en directo qué letra es** (también si es de otro grupo, o si no es ninguna letra). Tabla del grupo con mini-celdas: al pulsar una letra se muestra su celda y sus teclas.
+  - **Práctica de lectura**: 10 celdas de lectura (RF-16), disponible cuando hay ≥ 3 letras escritas bien al menos una vez.
+
 ### 4.2 RPG
 - **RF-10** Mapa del mundo dividido en regiones = niveles curriculares (§3).
 - **RF-11** **Combate por hechizos:** cada hechizo es una letra/palabra; leerla o escribirla correctamente lo lanza. Combos = racha de aciertos.

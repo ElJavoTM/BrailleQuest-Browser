@@ -210,6 +210,7 @@ Como el juego será **gratuito para otros**, antes de publicarlo:
 - [x] Revancha tras fallo (RF-07, RF-08)
 - [x] Ronda de lectura entre bloques (RF-16)
 - [x] Guardado en cookies (RF-40)
+- [x] Menú inicial con modos: Aventura, Calentamiento y Práctica de lectura (RF-09)
 
 ## 8. Pendiente para la Fase 2 (vertical slice)
 

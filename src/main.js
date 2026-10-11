@@ -45,7 +45,7 @@ function applySettings() {
   document.body.classList.toggle('no-fx', !settings.effects);
   document.body.classList.toggle('hide-keyboard', !settings.keyboard);
   document.getElementById('btn-calm').setAttribute('aria-pressed', settings.calm);
-  document.getElementById('controls').innerHTML = CONTROLS[settings.inputMode];
+  document.querySelectorAll('.controls-input').forEach((el) => { el.innerHTML = CONTROLS[settings.inputMode]; });
   game.setLayout(settings.layout);
   senses.applySettings();
 }
@@ -90,4 +90,4 @@ document.getElementById('btn-calm').addEventListener('click', (e) => {
 });
 
 applySettings();
-game.showScreen('start');
+game.showMenu();

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles/main.css">
   <script type="module" src="src/main.js"></script>
 </head>
-<body data-screen="start">
+<body data-screen="menu">
   <canvas id="fx" aria-hidden="true"></canvas>
 
   <header class="hud">
@@ -15,13 +15,14 @@
     <div id="hud-block" class="hud-block"></div>
     <div id="hud-combo" class="hud-combo"></div>
     <div class="hud-actions">
+      <button id="btn-menu" class="chip">Menú</button>
       <button id="btn-calm" class="chip" aria-pressed="false">Modo calma</button>
       <button id="btn-settings" class="chip" aria-label="Panel sensorial">Ajustes</button>
     </div>
   </header>
 
   <main>
-    <section id="screen-start" class="screen active">
+    <section id="screen-menu" class="screen active">
       <h1 class="logo">Braille<span>Quest</span></h1>
       <p class="tagline">Dibuja la celda con el teclado. Lanza el hechizo.</p>
       <div class="start-map" aria-hidden="true">
@@ -29,7 +30,31 @@
         <span class="arrow">→</span>
         <div class="mini-cell"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       </div>
-      <p class="press">Pulsa cualquier tecla para empezar</p>
+      <div id="menu-options" class="options"></div>
+      <p class="controls"><kbd>↑</kbd> <kbd>↓</kbd> elegir · <kbd>Enter</kbd> empezar · o pulsa el número</p>
+    </section>
+
+    <section id="screen-groups" class="screen">
+      <div class="banner show">Calentamiento</div>
+      <h2>¿Con qué letras calientas?</h2>
+      <div id="group-options" class="options"></div>
+      <p class="controls"><kbd>↑</kbd> <kbd>↓</kbd> elegir · <kbd>Enter</kbd> empezar · <kbd>Esc</kbd> menú</p>
+    </section>
+
+    <section id="screen-warmup" class="screen">
+      <h2 id="warm-title"></h2>
+      <div class="arena">
+        <div class="prompt">
+          <div class="banner show">Es la…</div>
+          <div id="warm-live" class="target"></div>
+        </div>
+        <div id="warm-cell" class="cell-wrap"></div>
+        <div id="warm-keyboard" class="keyboard-wrap"></div>
+      </div>
+      <p id="warm-message" class="message"></p>
+      <p class="controls controls-input"></p>
+      <div id="warm-chart" class="chart"></div>
+      <p class="controls"><span id="warm-count"></span> · <kbd>Esc</kbd> cambiar de grupo</p>
     </section>
 
     <section id="screen-battle" class="screen">
@@ -53,18 +78,18 @@
       </div>
 
       <p id="message" class="message"></p>
-      <p id="controls" class="controls"></p>
+      <p class="controls controls-input"></p>
       <div id="crystals" class="crystals"></div>
     </section>
 
     <section id="screen-reading" class="screen">
-      <div class="banner show">Ronda de lectura</div>
+      <div id="read-banner" class="banner show"></div>
       <h2>¿Qué letra es?</h2>
       <div id="read-cell" class="cell-wrap"></div>
       <div id="read-choices" class="choices"></div>
       <p id="read-message" class="message"></p>
       <div id="read-progress" class="pips"></div>
-      <p class="controls">Pulsa la letra en tu teclado · <kbd>Esc</kbd> saltar la lectura</p>
+      <p class="controls">Pulsa la letra en tu teclado · <kbd>Esc</kbd> <span id="read-escape"></span></p>
     </section>
 
     <section id="screen-break" class="screen">
@@ -79,7 +104,7 @@
       <h2>Sesión completa</h2>
       <div id="end-stats" class="stats"></div>
       <p class="muted">Tu progreso se ha guardado. Mañana el juego sabrá qué repasar.</p>
-      <p class="press"><kbd>Enter</kbd> jugar otra sesión</p>
+      <p class="press"><kbd>Enter</kbd> jugar otra sesión · <kbd>Esc</kbd> menú</p>
     </section>
   </main>
 
