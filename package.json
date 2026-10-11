@@ -1,0 +1,9 @@
+{
+  "name": "braille-quest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "start": "./jugar.sh"
+  }
+}

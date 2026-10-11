@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BrailleQuest</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body data-screen="start">
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <header class="hud">
+    <div class="brand">Braille<span>Quest</span></div>
+    <div id="hud-block" class="hud-block"></div>
+    <div id="hud-combo" class="hud-combo"></div>
+    <div class="hud-actions">
+      <button id="btn-calm" class="chip" aria-pressed="false">Modo calma</button>
+      <button id="btn-settings" class="chip" aria-label="Panel sensorial">Ajustes</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="screen-start" class="screen active">
+      <h1 class="logo">Braille<span>Quest</span></h1>
+      <p class="tagline">Dibuja la celda con el teclado. Lanza el hechizo.</p>
+      <div class="start-map" aria-hidden="true">
+        <div class="mini-keys"><b>Q</b><b>W</b><b>A</b><b>S</b><b>Z</b><b>X</b></div>
+        <span class="arrow">→</span>
+        <div class="mini-cell"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <p class="press">Pulsa cualquier tecla para empezar</p>
+    </section>
+
+    <section id="screen-battle" class="screen">
+      <div id="enemy" class="enemy">
+        <svg viewBox="-60 -60 120 120" aria-hidden="true">
+          <polygon id="enemy-shape" points="" />
+        </svg>
+        <div class="enemy-info">
+          <div id="enemy-name" class="enemy-name"></div>
+          <div class="hp"><div id="hp-fill" class="hp-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="arena">
+        <div class="prompt">
+          <div id="banner" class="banner"></div>
+          <div id="target" class="target"></div>
+        </div>
+        <div id="cell" class="cell-wrap"></div>
+        <div id="keyboard" class="keyboard-wrap"></div>
+      </div>
+
+      <p id="message" class="message"></p>
+      <p id="controls" class="controls"></p>
+      <div id="crystals" class="crystals"></div>
+    </section>
+
+    <section id="screen-reading" class="screen">
+      <div class="banner show">Ronda de lectura</div>
+      <h2>¿Qué letra es?</h2>
+      <div id="read-cell" class="cell-wrap"></div>
+      <div id="read-choices" class="choices"></div>
+      <p id="read-message" class="message"></p>
+      <div id="read-progress" class="pips"></div>
+      <p class="controls">Pulsa la letra en tu teclado · <kbd>Esc</kbd> saltar la lectura</p>
+    </section>
+
+    <section id="screen-break" class="screen">
+      <h2 id="break-title"></h2>
+      <div id="break-stats" class="stats"></div>
+      <div class="breath" aria-hidden="true"></div>
+      <p id="break-msg" class="muted">Respira un momento…</p>
+      <p id="break-continue" class="press" hidden><kbd>Enter</kbd> siguiente bloque · <kbd>Esc</kbd> terminar por hoy</p>
+    </section>
+
+    <section id="screen-end" class="screen">
+      <h2>Sesión completa</h2>
+      <div id="end-stats" class="stats"></div>
+      <p class="muted">Tu progreso se ha guardado. Mañana el juego sabrá qué repasar.</p>
+      <p class="press"><kbd>Enter</kbd> jugar otra sesión</p>
+    </section>
+  </main>
+
+  <dialog id="settings">
+    <form method="dialog">
+      <h2>Panel sensorial</h2>
+      <label class="row"><input type="checkbox" name="sound"> Sonido</label>
+      <label class="row range">Volumen <input type="range" name="volume" min="0" max="1" step="0.05"></label>
+      <label class="row"><input type="checkbox" name="voice"> Voz (dice la letra)</label>
+      <label class="row"><input type="checkbox" name="effects"> Partículas y animaciones</label>
+      <label class="row"><input type="checkbox" name="vibration"> Vibración (solo móviles Android)</label>
+      <label class="row"><input type="checkbox" name="keyboard"> Teclado en pantalla</label>
+      <fieldset>
+        <legend>Modo de entrada</legend>
+        <label class="row"><input type="radio" name="inputMode" value="toggle"> Alternar: tecla a tecla + Enter</label>
+        <label class="row"><input type="radio" name="inputMode" value="fast"> Rápido: todas a la vez</label>
+      </fieldset>
+      <fieldset>
+        <legend>Mano</legend>
+        <label class="row"><input type="radio" name="layout" value="left"> Izquierda: Q A Z / W S X</label>
+        <label class="row"><input type="radio" name="layout" value="right"> Derecha: U J M / I K ,</label>
+      </fieldset>
+      <button class="chip primary" value="close">Cerrar</button>
+    </form>
+  </dialog>
+</body>
+</html>
