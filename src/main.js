@@ -32,12 +32,14 @@ applyDotColors();
 const senses = createSenses(settings);
 const fx = createFx(document.getElementById('fx'), () => settings.effects && !settings.calm);
 const game = createGame({ data, settings, senses, fx, persist });
-const input = createInput(settings, { onChange: game.onChange, onCommit: game.onCommit });
+const input = createInput(settings, {
+  onChange: game.onChange, onCommit: game.onCommit, onClear: game.onClear,
+});
 game.attachInput(input);
 
 const CONTROLS = {
   toggle: 'Pulsa las teclas para encender puntos · <kbd>Enter</kbd>/<kbd>Espacio</kbd> lanzar · <kbd>Retroceso</kbd> borrar',
-  fast: 'Pulsa las teclas a la vez y suelta para lanzar',
+  fast: 'Pulsa las teclas a la vez y suelta para lanzar · <kbd>Retroceso</kbd> borrar',
 };
 
 function applySettings() {

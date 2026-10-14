@@ -69,7 +69,8 @@ export function createKeyboard(container) {
     setLayout(layout) {
       keys.forEach((k, i) => {
         const dot = DOTS[i];
-        k.innerHTML = `<b>${KEY_LABELS[layout][dot]}</b><small>${dot}</small>`;
+        // El número del punto manda; la tecla física va pequeña debajo.
+        k.innerHTML = `<b>${dot}</b><small>${KEY_LABELS[layout][dot]}</small>`;
       });
     },
     set(mask, marks = {}) {
@@ -90,6 +91,7 @@ export function dotColorsOf(mask) {
 }
 
 // Partículas en un <canvas> a pantalla completa. Solo anima mientras hay partículas vivas.
+// Tres tipos: chispas (caen con gravedad), proyectiles (vuelan en curva hacia un destino) y ondas.
 export function createFx(canvas, enabled) {
   const ctx = canvas.getContext('2d');
   let particles = [];
@@ -104,51 +106,122 @@ export function createFx(canvas, enabled) {
   resize();
   window.addEventListener('resize', resize);
 
-  function frame() {
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    particles = particles.filter((p) => p.life > 0);
-    for (const p of particles) {
+  const centerOf = (element) => {
+    const r = element.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  };
+
+  function glow(color, blur) {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+  }
+
+  function step(p) {
+    if (p.kind === 'bolt') {
+      if (p.delay > 0) { p.delay -= 1; return; }
+      p.t = Math.min(p.t + p.speed, 1);
+      const u = 1 - p.t; // curva cuadrática de Bézier
+      p.x = u * u * p.x0 + 2 * u * p.t * p.cx + p.t * p.t * p.x1;
+      p.y = u * u * p.y0 + 2 * u * p.t * p.cy + p.t * p.t * p.y1;
+      if (p.t >= 1) p.life = 0;
+      glow(p.color, 16);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    p.life -= 1;
+    ctx.globalAlpha = Math.max(p.life / p.maxLife, 0);
+    if (p.kind === 'ring') {
+      p.r += p.vr;
+      p.vr *= 0.93;
+      glow(p.color, 20);
+      ctx.lineWidth = 4 * (p.life / p.maxLife) + 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
       p.x += p.vx;
       p.y += p.vy;
       p.vy += 0.12;
       p.vx *= 0.98;
-      p.life -= 1;
-      ctx.globalAlpha = Math.max(p.life / p.maxLife, 0);
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 12;
+      glow(p.color, 12);
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    particles = particles.filter((p) => p.life > 0);
+    particles.forEach(step);
     if (particles.length) requestAnimationFrame(frame);
     else running = false;
+  }
+
+  function start() {
+    if (!running) {
+      running = true;
+      requestAnimationFrame(frame);
+    }
+  }
+
+  function sparks({ x, y }, colors, count, power = 1) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (2 + Math.random() * 5) * power;
+      const life = 40 + Math.random() * 30;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        size: 2 + Math.random() * 3 * power,
+        color: colors[i % colors.length],
+        life, maxLife: life,
+      });
+    }
+  }
+
+  function ring({ x, y }, color, power = 1) {
+    particles.push({ kind: 'ring', x, y, r: 10, vr: 9 * power, color, life: 30, maxLife: 30 });
   }
 
   return {
     burstAt(element, colors, count = 28) {
       if (!enabled() || !colors.length) return;
-      const r = element.getBoundingClientRect();
-      const x = r.left + r.width / 2;
-      const y = r.top + r.height / 2;
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 2 + Math.random() * 5;
-        const life = 40 + Math.random() * 30;
+      sparks(centerOf(element), colors, count);
+      start();
+    },
+    // Hechizo: un proyectil por color sale de `from`, vuela hasta `to` y estalla allí.
+    // `onHit` se llama al impactar (o al momento si los efectos están apagados).
+    spell(from, to, colors, { power = 1, onHit } = {}) {
+      if (!enabled() || !colors.length) {
+        onHit?.();
+        return;
+      }
+      const a = centerOf(from);
+      const b = centerOf(to);
+      const flight = 18; // fotogramas
+      colors.forEach((color, i) => {
+        const bend = (i - (colors.length - 1) / 2) * 70 + (Math.random() - 0.5) * 40;
         particles.push({
-          x, y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 2,
-          size: 2 + Math.random() * 3,
-          color: colors[i % colors.length],
-          life, maxLife: life,
+          kind: 'bolt', x: a.x, y: a.y, x0: a.x, y0: a.y, x1: b.x, y1: b.y,
+          cx: (a.x + b.x) / 2 + bend, cy: Math.min(a.y, b.y) - 60 - Math.abs(bend) / 2,
+          t: 0, speed: 1 / flight, delay: i * 2, size: 5 + power * 2, color, life: 1,
         });
-      }
-      if (!running) {
-        running = true;
-        requestAnimationFrame(frame);
-      }
+      });
+      start();
+      const delayFrames = flight + (colors.length - 1) * 2;
+      setTimeout(() => {
+        sparks(b, colors, Math.round(20 * power), power);
+        colors.forEach((color, i) => setTimeout(() => ring(b, color, power), i * 60));
+        start();
+        onHit?.();
+      }, (delayFrames * 1000) / 60);
     },
   };
 }

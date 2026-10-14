@@ -13,13 +13,16 @@ export const KEY_LABELS = {
 
 // Modo "toggle": cada tecla enciende/apaga su punto; Enter/Espacio confirma.
 // Modo "fast": las teclas a la vez; la celda se confirma al soltar la última.
-export function createInput(settings, { onChange, onCommit }) {
+// Retroceso/Supr limpia la celda en cualquier modo; si la entrada está bloqueada
+// (p. ej. mostrando un fallo) avisa con onClear para que el juego decida.
+export function createInput(settings, { onChange, onCommit, onClear }) {
   let mask = 0;
   let enabled = false;
   const held = new Set();
 
-  const blocked = (e) => !enabled || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey
+  const ignored = (e) => e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey
     || document.querySelector('dialog[open]');
+  const isClear = (e) => e.code === 'Backspace' || e.code === 'Delete';
 
   function reset() {
     mask = 0;
@@ -35,7 +38,14 @@ export function createInput(settings, { onChange, onCommit }) {
   }
 
   window.addEventListener('keydown', (e) => {
-    if (blocked(e)) return;
+    if (ignored(e)) return;
+    if (isClear(e)) {
+      e.preventDefault();
+      if (enabled) reset();
+      else onClear?.();
+      return;
+    }
+    if (!enabled) return;
     const dot = LAYOUTS[settings.layout][e.code];
     if (dot) {
       e.preventDefault();
@@ -54,9 +64,6 @@ export function createInput(settings, { onChange, onCommit }) {
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') {
       e.preventDefault();
       if (!e.repeat && mask) commit();
-    } else if (e.code === 'Backspace') {
-      e.preventDefault();
-      reset();
     }
   });
 

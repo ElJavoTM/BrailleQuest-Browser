@@ -78,3 +78,18 @@ export function dotDistance(a, b) {
 export function unicodeOf(mask) {
   return String.fromCodePoint(0x2800 + mask);
 }
+
+// ---------- Números ----------
+// Signo de número (puntos 3-4-5-6) seguido de los dígitos, que son a–j: 1 = a … 9 = i, 0 = j.
+
+export const NUMBER_SIGN = maskFromDots([3, 4, 5, 6]);
+const LETTER_BY_DIGIT = [...'jabcdefghi'];
+
+export function digitMask(digit) {
+  return maskOf(LETTER_BY_DIGIT[digit]);
+}
+
+// Celdas de un número entero no negativo: [signo, dígito, dígito…].
+export function numberCells(n) {
+  return [NUMBER_SIGN, ...[...String(n)].map((d) => digitMask(Number(d)))];
+}

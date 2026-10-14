@@ -34,6 +34,13 @@
       <p class="controls"><kbd>↑</kbd> <kbd>↓</kbd> elegir · <kbd>Enter</kbd> empezar · o pulsa el número</p>
     </section>
 
+    <section id="screen-subjects" class="screen">
+      <div class="banner show">Aventura</div>
+      <h2>¿Qué quieres aprender?</h2>
+      <div id="subject-options" class="options"></div>
+      <p class="controls"><kbd>↑</kbd> <kbd>↓</kbd> elegir · <kbd>Enter</kbd> empezar · <kbd>Esc</kbd> menú</p>
+    </section>
+
     <section id="screen-groups" class="screen">
       <div class="banner show">Calentamiento</div>
       <h2>¿Con qué letras calientas?</h2>
@@ -72,6 +79,7 @@
         <div class="prompt">
           <div id="banner" class="banner"></div>
           <div id="target" class="target"></div>
+          <div id="sequence" class="sequence"></div>
         </div>
         <div id="cell" class="cell-wrap"></div>
         <div id="keyboard" class="keyboard-wrap"></div>
@@ -84,20 +92,21 @@
 
     <section id="screen-reading" class="screen">
       <div id="read-banner" class="banner show"></div>
-      <h2>¿Qué letra es?</h2>
-      <div id="read-cell" class="cell-wrap"></div>
+      <h2 id="read-title">¿Qué letra es?</h2>
+      <div id="read-cell" class="cell-wrap cell-row"></div>
       <div id="read-choices" class="choices"></div>
+      <div id="read-typed" class="typed" hidden></div>
       <p id="read-message" class="message"></p>
       <div id="read-progress" class="pips"></div>
-      <p class="controls">Pulsa la letra en tu teclado · <kbd>Esc</kbd> <span id="read-escape"></span></p>
+      <p id="read-controls" class="controls"></p>
     </section>
 
     <section id="screen-break" class="screen">
       <h2 id="break-title"></h2>
       <div id="break-stats" class="stats"></div>
       <div class="breath" aria-hidden="true"></div>
-      <p id="break-msg" class="muted">Respira un momento…</p>
-      <p id="break-continue" class="press" hidden><kbd>Enter</kbd> siguiente bloque · <kbd>Esc</kbd> terminar por hoy</p>
+      <p id="break-msg" class="muted">Recomendado: respira con el círculo unos segundos.</p>
+      <p id="break-continue" class="press"><kbd>Enter</kbd> siguiente bloque · <kbd>Esc</kbd> terminar por hoy</p>
     </section>
 
     <section id="screen-end" class="screen">

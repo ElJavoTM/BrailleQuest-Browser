@@ -1,8 +1,9 @@
 import { test } from 'node:test';
+import { digitMask } from '../src/braille.js';
 import assert from 'node:assert/strict';
 import {
   createProgress, canUnlock, unlockNext, needsHint, recordAnswer, pickNext, statOf,
-  isMastered, MAX_BOX, UNLOCK_BOX, MASTERED_BOX,
+  isMastered, MAX_BOX, MASTERED_BOX,
   createReview, scheduleReview, takeDueReview, REVIEW_ROUNDS, REVIEW_GAP,
   readablePool, pickChoices,
 } from '../src/learning.js';
@@ -16,12 +17,14 @@ test('desbloquea en orden y se detiene al final', () => {
   assert.equal(unlockNext(p, ['a', 'b']), null);
 });
 
-test('solo se desbloquea cuando todas las letras llegan a UNLOCK_BOX', () => {
+test('solo se desbloquea cuando todas las letras están dominadas (MASTERED_BOX)', () => {
   const p = createProgress();
   assert.equal(canUnlock(p), true);
   unlockNext(p, ORDER);
   assert.equal(canUnlock(p), false);
-  statOf(p, 'a').box = UNLOCK_BOX;
+  statOf(p, 'a').box = MASTERED_BOX - 1;
+  assert.equal(canUnlock(p), false);
+  statOf(p, 'a').box = MASTERED_BOX;
   assert.equal(canUnlock(p), true);
 });
 
@@ -137,4 +140,29 @@ test('pickChoices prioriza las letras con las que ya se confundió', () => {
 test('pickChoices funciona con pocas letras', () => {
   assert.deepEqual(pickChoices('a', ['a']), ['a']);
   assert.equal(pickChoices('a', ['a', 'b']).length, 2);
+});
+
+test('pickChoices con números: compara por la celda del último dígito', () => {
+  const numbers = Array.from({ length: 10 }, (_, i) => String(i + 1));
+  const lastDigit = (n) => digitMask(Number(n.at(-1)));
+  for (let i = 0; i < 30; i++) {
+    const choices = pickChoices('10', numbers, {}, Math.random, lastDigit);
+    assert.equal(choices.length, 3);
+    assert.ok(choices.includes('10'));
+    assert.equal(new Set(choices).size, 3);
+  }
+});
+
+test('progresión: sin fallos se desbloquean letras nuevas durante toda la sesión, no solo 3', () => {
+  const p = createProgress();
+  const order = [...'abcdefghij'];
+  let previous = null;
+  for (let turn = 0; turn < 36; turn++) { // una sesión: 3 bloques × 12 aciertos
+    const letter = (canUnlock(p) && unlockNext(p, order)) || pickNext(p, Math.random, previous);
+    recordAnswer(p, letter, { correct: true, hinted: needsHint(p, letter) });
+    previous = letter;
+  }
+  assert.ok(p.unlocked.length >= 5, `solo ${p.unlocked.length} letras: ${p.unlocked.join('')}`);
+  // Nunca hay más de una letra sin dominar a la vez.
+  assert.ok(p.unlocked.filter((l) => !isMastered(p, l)).length <= 1);
 });

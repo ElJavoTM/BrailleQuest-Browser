@@ -131,6 +131,28 @@ h1, h2 { margin: 0; }
 }
 @keyframes defeat { to { transform: scale(1.8) rotate(90deg); opacity: 0; } }
 
+/* Golpe: número de daño flotante y temblor de pantalla (más fuerte con combo ≥ 5) */
+.enemy { position: relative; }
+.damage {
+  position: absolute; left: 55px; top: 10px; transform: translateX(-50%);
+  font-size: 26px; font-weight: 800; color: #fff; white-space: nowrap; pointer-events: none;
+  text-shadow: 0 0 calc(12px * var(--glow)) var(--enemy);
+  animation: damage .9s ease-out forwards;
+}
+.damage.crit { font-size: 34px; color: var(--dot-1); text-shadow: 0 0 calc(18px * var(--glow)) var(--dot-1); }
+@keyframes damage {
+  0% { transform: translate(-50%, 0) scale(.6); opacity: 0; }
+  20% { transform: translate(-50%, -14px) scale(1.25); opacity: 1; }
+  100% { transform: translate(-50%, -60px) scale(1); opacity: 0; }
+}
+#screen-battle.quake { animation: quake .25s ease-out; }
+#screen-battle.quake-big { animation: quake-big .4s ease-out; }
+@keyframes quake { 25% { transform: translate(-3px, 2px); } 50% { transform: translate(3px, -2px); } 75% { transform: translate(-2px, 1px); } }
+@keyframes quake-big {
+  15% { transform: translate(-8px, 4px) rotate(-.4deg); } 30% { transform: translate(7px, -5px) rotate(.4deg); }
+  45% { transform: translate(-6px, 3px); } 60% { transform: translate(4px, -3px); } 80% { transform: translate(-2px, 1px); }
+}
+
 .arena { display: flex; align-items: center; justify-content: center; gap: 48px; }
 
 .prompt { width: 150px; display: flex; flex-direction: column; align-items: center; }
@@ -141,6 +163,15 @@ h1, h2 { margin: 0; }
   text-shadow: 0 0 calc(24px * var(--glow)) var(--accent);
 }
 .target.pop { animation: pop .3s ease-out; }
+/* Práctica de contar: misma pantalla que el combate, sin enemigo ni cristales */
+#screen-battle.practice .enemy, #screen-battle.practice .crystals { display: none; }
+/* Celdas de un número: signo + dígitos, se van rellenando */
+.sequence { display: flex; gap: 6px; min-height: 34px; margin-top: 6px; }
+.sequence i {
+  width: 26px; height: 34px; border-radius: 6px; border: 1px solid var(--line);
+  display: grid; place-items: center; font-style: normal; font-size: 24px; color: var(--good);
+}
+.sequence i.current { border-color: var(--dot-1); box-shadow: 0 0 calc(8px * var(--glow)) var(--dot-1); }
 @keyframes pop { from { transform: scale(.6); opacity: 0; } }
 
 /* Celda braille grande */
@@ -253,6 +284,12 @@ body.hide-keyboard .keyboard-wrap { display: none; }
 
 #screen-reading { gap: 16px; }
 #screen-reading .cell .dot span { visibility: hidden; } /* sin números: se lee por la forma */
+.cell-row { display: flex; gap: 16px; justify-content: center; }
+.typed {
+  min-width: 90px; padding: 6px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-2);
+  font-size: 40px; font-weight: 800; letter-spacing: .1em; color: var(--accent);
+}
+.typed[hidden] { display: none; }
 .cell.pop { animation: pop .3s ease-out; }
 .choices { display: flex; gap: 14px; min-height: 64px; }
 .choice {
@@ -301,6 +338,7 @@ body.calm *, body.no-fx * { animation: none !important; }
 body.calm .dot, body.calm .key { transition: none; }
 body.calm .dot.on { transform: none; }
 body.calm .press, body.no-fx .press { opacity: 1; }
+body.calm .damage, body.no-fx .damage { display: none; }
 
 /* Pantallas pequeñas: la celda y el teclado se apilan */
 @media (max-width: 760px), (max-height: 640px) {

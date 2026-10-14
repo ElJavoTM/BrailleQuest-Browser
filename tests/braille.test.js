@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LEVELS, LETTER_NAMES, maskOf, charOf, maskFromDots, dotsFromMask, unicodeOf, dotDistance,
+  NUMBER_SIGN, digitMask, numberCells,
 } from '../src/braille.js';
 
 test('serie 1 (a–j) según la tabla CBE', () => {
@@ -63,4 +64,11 @@ test('dotDistance cuenta los puntos distintos', () => {
   assert.equal(dotDistance(maskOf('e'), maskOf('e')), 0);
   assert.equal(dotDistance(maskOf('e'), maskOf('i')), 4); // 1-5 vs 2-4
   assert.equal(dotDistance(maskOf('a'), maskOf('b')), 1);
+});
+
+test('números: signo 3-4-5-6 y dígitos = a–j (1 = a, 0 = j)', () => {
+  assert.deepEqual(dotsFromMask(NUMBER_SIGN), [3, 4, 5, 6]);
+  [...'jabcdefghi'].forEach((letter, digit) => assert.equal(digitMask(digit), maskOf(letter), String(digit)));
+  assert.equal(numberCells(3).map(unicodeOf).join(''), '⠼⠉');
+  assert.equal(numberCells(10).map(unicodeOf).join(''), '⠼⠁⠚');
 });

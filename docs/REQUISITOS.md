@@ -64,9 +64,11 @@ Un RPG corto y rejugable en el que **leer y escribir braille es la mecánica pri
 
 ### 4.1b Menú y modos
 - **RF-09** **Menú inicial** con los modos de juego, navegable con flechas, números, `Enter` o ratón. `Esc` o el botón *Menú* vuelven a él desde cualquier modo.
-  - **Aventura**: la sesión de 3 combates (RF-10 a RF-16).
+  - **Aventura**: la sesión de 3 combates (RF-10 a RF-16). Antes se elige qué aprender: **Letras** (a–j) o **Números** (1–10). En números el signo de número (⠼) ya viene puesto y solo se escriben los dígitos, celda a celda, con un indicador de cuáles van escritas; cada 8 turnos, si hay ≥ 3 números aprendidos y caben en la vida del enemigo, sale una **ronda en orden** del 1 al último aprendido; el hechizo se lanza al completar el número. Progreso, cristales y ronda de lectura propios de cada opción.
   - **Calentamiento**: sin puntuación ni efecto en el progreso. Se elige un grupo (*Mis letras*, Serie 1 a–j, Serie 2 k–t, Serie 3 u–z, ñ/w o *Todas*), se dibuja **cualquier celda** y el juego dice **en directo qué letra es** (también si es de otro grupo, o si no es ninguna letra). Tabla del grupo con mini-celdas: al pulsar una letra se muestra su celda y sus teclas.
-  - **Práctica de lectura**: 10 celdas de lectura (RF-16), disponible cuando hay ≥ 3 letras escritas bien al menos una vez.
+  - **Práctica de lectura**: 10 celdas de lectura (RF-16), disponible cuando hay ≥ 3 letras escritas bien al menos una vez. Al terminar, `Enter` hace otras 10 y `Esc` vuelve al menú.
+  - **Contar del 1 al 10**: escribir los números del 1 al 10 en orden, en bucle (el signo de número ya viene puesto). Sin enemigo, sin puntuación y sin efecto en el progreso; pista de puntos para los números aún no aprendidos y tras un fallo. El HUD cuenta las vueltas.
+  - **Números**: 10 números del 1 al 10 para leer (signo de número ⠼ + dígitos = a–j; el 10 es ⠼⠁⠚). Se teclean con `0`–`9` y se comprueban al tener tantos dígitos como el número; `Retroceso` borra. Pista de 3 opciones y revancha como en la lectura de letras, con estadísticas propias. Siempre disponible.
 
 ### 4.2 RPG
 - **RF-10** Mapa del mundo dividido en regiones = niveles curriculares (§3).

@@ -136,7 +136,7 @@ Regla: `braille.js` y `learning.js` **no tocan el DOM**. Así se testean con Nod
 | Fase | Entregable | Ronda de preguntas para ti | Criterio para avanzar |
 |---|---|---|---|
 | **0. Descubrimiento** | Decisiones de [REQUISITOS §10](REQUISITOS.md#10-decisiones-fase-0) cerradas | R0 ✅ | **Completada (2026-10-11)** |
-| **1. Prototipo del núcleo** | Celda + entrada QAZ/WSX + color/sonido por punto + letras a–j, sin arte | R1 | Te resulta agradable escribir letras y la entrada QAZ/WSX te sale natural |
+| **1. Prototipo del núcleo** | Celda + entrada QAZ/WSX + color/sonido por punto + letras a–j, sin arte | R1 ✅ | **Completada (2026-10-11)** |
 | **2. Vertical slice** | Bosque de los Diez completo: mapa, combate, botín, SRS, panel sensorial | R2 | Reconoces y escribes a–j tras ≤ 5 sesiones y te apetece volver |
 | **3. MVP navegador** | Regiones 1–3 (a–z), panel sensorial completo, offline | R3 | Completas a–z y las métricas de juego (§7 de requisitos) tienen sentido en tu uso |
 | **4. Contenido completo** | Regiones 4–6, exportación de progreso | R4 | Validas el contenido; tablas braille comprobadas contra la norma CBE |
@@ -155,7 +155,17 @@ Cada fase se construye en iteraciones cortas: Claude implementa → tú juegas �
 - Duración de sesión → **10 min**
 - Nombre → **BrailleQuest**
 
-**R1 — Prototipo**
+**R1 — Prototipo** ✅ (respuestas del 2026-10-11)
+- Entrada → **natural, modo alternar**
+- Teclado en pantalla → **muy útil, pero las letras QAZ/WSX destacaban demasiado y liaban** → *ajustado: número del punto en grande, tecla física en pequeño*
+- Sonidos por punto → **ayudan**
+- Colores → **se distinguen todos**
+- Duración → **10 min justos**, pero **la pausa no debe bloquear** → *ajustado: el círculo de respiración se recomienda, `Enter` sigue al momento*
+- Estímulo → **poco** → *ajustado: el hechizo vuela de la celda al enemigo, onda expansiva, número de daño, temblor de pantalla y «¡CRÍTICO!» con combo ≥ 5 (todo se apaga con modo calma)*
+- Lo más divertido → **el combate**
+- Lo que cambiaría → **mejor combate: más efectos, equipables…**
+
+Preguntas originales:
 - ¿La entrada `QAZ`/`WSX` te resulta natural? ¿Modo alternar o modo rápido?
 - ¿Te ayuda el teclado en pantalla coloreado?
 - ¿Los sonidos por punto te ayudan, te dan igual o te molestan?
@@ -203,16 +213,25 @@ Como el juego será **gratuito para otros**, antes de publicarlo:
 - [x] Render HTML/CSS de celda grande con color por punto
 - [x] Bucle mínimo: muestra letra → escribe → feedback (combate contra enemigo geométrico, 3 bloques con pausa)
 - [x] Panel sensorial básico (volumen, voz, animaciones, vibración, teclado, modo calma)
-- [ ] **Juegas el prototipo y respondes la ronda R1** ← único pendiente de la Fase 1
+- [x] Juegas el prototipo y respondes la ronda R1 (+ ajustes de R1 aplicados)
 
 **Adelantado de la Fase 2 (hecho, 2026-10-11):**
-- [x] Repetición espaciada (Leitner) con desbloqueo progresivo (máx. 3 letras nuevas por sesión)
+- [x] Repetición espaciada (Leitner) con desbloqueo progresivo: entra una letra nueva cuando todas las anteriores están dominadas (caja 3), sin tope por sesión
 - [x] Revancha tras fallo (RF-07, RF-08)
 - [x] Ronda de lectura entre bloques (RF-16)
 - [x] Guardado en cookies (RF-40)
 - [x] Menú inicial con modos: Aventura, Calentamiento y Práctica de lectura (RF-09)
+- [x] Modo **Números**: leer del 1 al 10 (adelanto de la Torre de los Números, RF-09)
+- [x] Aventura de **números**: escribir del 1 al 10 en combate (signo + dígitos)
 
 ## 8. Pendiente para la Fase 2 (vertical slice)
+
+**Prioridad tras R1** (lo más divertido es el combate y pides más combate, efectos y equipables):
+1. Personaje con progresión y **equipables** (RF-12) + **botín sorpresa** que los suelte (RF-33)
+2. **Jefe de región** con palabras (RF-13)
+3. Más tipos de encuentro y rotación (RF-37) para que el combate no se repita
+4. Mapa del mundo (RF-10)
+5. El resto de la lista
 
 Requisitos aún sin montar:
 - [ ] Mapa del mundo (RF-10) — de momento solo existe el Bosque de los Diez, sin mapa
@@ -236,5 +255,5 @@ Tareas técnicas:
 
 1. ~~**Ronda R0**~~ ✅ hecha: adolescente, gratuito, tú + Claude, neón geométrico, sesiones de 10 min, "BrailleQuest".
 2. ~~Prototipo de la Fase 1~~ ✅ construido.
-3. **Juegas unas sesiones y respondemos la ronda R1** (§6.2) → con eso se cierra la Fase 1.
-4. Fase 2: priorizar la lista de §8 según tus respuestas de R1.
+3. ~~Ronda R1~~ ✅ hecha y ajustes aplicados → **Fase 1 cerrada**.
+4. **Fase 2**: empezar por equipables + botín (RF-12, RF-33), según la prioridad de §8.

@@ -3,9 +3,9 @@ import { maskOf, dotDistance } from './braille.js';
 // Cada letra vive en una "caja" de 0 a MAX_BOX; cuanto más baja, más a menudo sale.
 
 export const MAX_BOX = 5;
+// Dominada = caja 3 (el cristal se ilumina). Una letra nueva entra en cuanto
+// todas las anteriores están dominadas, sin tope por sesión.
 export const MASTERED_BOX = 3;
-// Una letra nueva solo se desbloquea cuando todas las anteriores llegan a esta caja.
-export const UNLOCK_BOX = 2;
 
 export function createProgress() {
   return { unlocked: [], stats: {}, confusions: {} };
@@ -17,7 +17,7 @@ export function statOf(progress, letter) {
 }
 
 export function canUnlock(progress) {
-  return progress.unlocked.every((letter) => statOf(progress, letter).box >= UNLOCK_BOX);
+  return progress.unlocked.every((letter) => statOf(progress, letter).box >= MASTERED_BOX);
 }
 
 export function unlockNext(progress, order) {
@@ -106,9 +106,10 @@ export function readablePool(progress) {
 
 // Opciones de pista para leer: la correcta + 2 distractores, priorizando
 // las letras con las que ya se ha confundido y las que difieren en un solo punto.
-export function pickChoices(letter, pool, confusions = {}, random = Math.random) {
+// `maskFn` da la celda con la que comparar (los números usan la de su último dígito).
+export function pickChoices(letter, pool, confusions = {}, random = Math.random, maskFn = maskOf) {
   const score = (other) => 10 * ((confusions[`${letter}>${other}`] ?? 0) + (confusions[`${other}>${letter}`] ?? 0))
-    + (dotDistance(maskOf(letter), maskOf(other)) === 1 ? 1 : 0)
+    + (dotDistance(maskFn(letter), maskFn(other)) === 1 ? 1 : 0)
     + random() * 0.5;
   const distractors = pool
     .filter((other) => other !== letter)
