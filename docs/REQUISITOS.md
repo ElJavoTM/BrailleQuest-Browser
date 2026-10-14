@@ -74,6 +74,7 @@ Un RPG corto y rejugable en el que **leer y escribir braille es la mecánica pri
 - **RF-10** Mapa del mundo dividido en regiones = niveles curriculares (§3).
 - **RF-11** **Combate por hechizos:** cada hechizo es una letra/palabra; leerla o escribirla correctamente lo lanza. Combos = racha de aciertos.
 - **RF-12** Personaje con progresión (nivel, equipo cosmético, compañero mascota).
+  - ✅ **Hecho:** nivel = 1 + caracteres dominados (letras + números). Tres huecos de equipo que se abren por nivel: **Foco** (cómo vuela el hechizo, nivel 1), **Sello** (cómo estalla el impacto, nivel 3) y **Aura** (halo de la celda, nivel 5). 15 objetos (3 iniciales + 12 en cofres) en rareza común, rara y épica. Pantalla **Equipo** en el menú. Pendiente: compañero mascota.
 - **RF-13** Jefes de región = palabras o frases que combinan todo lo aprendido.
 - **RF-14** Botín y "cristales de letra" que se coleccionan al dominar cada carácter (dominio = SRS, no solo una respuesta correcta).
 - **RF-16** **Ronda de lectura** entre bloques, una de cada dos pausas, cuando hay ≥ 3 letras escritas bien al menos una vez: 6 celdas encendidas (sin números de punto) y el jugador **pulsa la letra en el teclado normal**. Con pista de 3 opciones mientras no la haya leído bien nunca, o tras un fallo. Los fallos de lectura tienen revancha (RF-08) y estadísticas propias, separadas de las de escritura. `Esc` la salta.
@@ -93,6 +94,7 @@ Un RPG corto y rejugable en el que **leer y escribir braille es la mecánica pri
 - **RF-31** Objetivo visible en todo momento (qué hago ahora + cuánto falta).
 - **RF-32** Feedback en **< 100 ms** tras cada respuesta.
 - **RF-33** Recompensas variables (botín sorpresa) **sin** mecánicas de casino, compras ni presión.
+  - ✅ **Hecho:** un **cofre** al derrotar a cada enemigo, con un objeto que aún no se tiene (nunca repite ni se pierde). La rareza mejora con los aciertos a la primera de ese combate; jugar mal nunca quita el cofre. Se ve en la pausa o al final, con `E` para equiparlo al momento.
 - **RF-34** Rachas **con perdón**: "comodín" semanal, sin castigo por días perdidos.
 - **RF-35** **Aviso anti-hiperfoco** configurable (sugerencia de pausa a los N minutos).
 - **RF-36** Retomar en 1 toque exactamente donde se dejó.

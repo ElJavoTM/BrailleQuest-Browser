@@ -146,6 +146,12 @@ export function createFx(canvas, enabled) {
       const u = 1 - p.t; // curva cuadrática de Bézier
       p.x = u * u * p.x0 + 2 * u * p.t * p.cx + p.t * p.t * p.x1;
       p.y = u * u * p.y0 + 2 * u * p.t * p.cy + p.t * p.t * p.y1;
+      if (p.spin) { // espiral: gira alrededor de la trayectoria y se cierra al llegar
+        const angle = p.phase + p.t * Math.PI * 6;
+        p.x += Math.cos(angle) * p.spin * u;
+        p.y += Math.sin(angle) * p.spin * u;
+      }
+      if (p.trail) trail.push({ x: p.x, y: p.y, size: p.size * 0.6, color: p.color, life: 10, maxLife: 10 });
       if (p.t >= 1) p.life = 0;
       glowAt(p.x, p.y, p.size, p.color);
       return;
@@ -166,19 +172,24 @@ export function createFx(canvas, enabled) {
       ctx.globalAlpha = alpha;
       ctx.lineWidth = w;
       ctx.stroke();
+    } else if (p.vx === undefined) { // estela: quieta
+      glowAt(p.x, p.y, p.size * alpha, p.color);
     } else {
       p.x += p.vx * k;
       p.y += p.vy * k;
-      p.vy += 0.12 * k;
+      p.vy += (p.gravity ?? 0.12) * k;
       p.vx *= 0.98 ** k;
       glowAt(p.x, p.y, p.size, p.color);
     }
     ctx.globalAlpha = 1;
   }
 
+  const trail = []; // estela del foco Cometa, se añade a las partículas en cada fotograma
+
   function frame(now) {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     const k = now < slowUntil ? 0.15 : 1;
+    particles.push(...trail.splice(0));
     particles = particles.filter((p) => p.life > 0);
     ctx.globalCompositeOperation = 'lighter'; // los brillos se suman, como luz de neón
     for (const p of particles) step(p, k);
@@ -194,10 +205,13 @@ export function createFx(canvas, enabled) {
     }
   }
 
-  function sparks({ x, y }, colors, count, power = 1) {
+  // `rays` > 0: las chispas salen en ese número de rayos (sello Estrella) y sin gravedad.
+  function sparks({ x, y }, colors, count, power = 1, rays = 0) {
     for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = (2 + Math.random() * 5) * power;
+      const angle = rays
+        ? (Math.floor(Math.random() * rays) / rays) * Math.PI * 2 + (Math.random() - 0.5) * 0.08
+        : Math.random() * Math.PI * 2;
+      const speed = (rays ? 4 + Math.random() * 7 : 2 + Math.random() * 5) * power;
       const life = 40 + Math.random() * 30;
       particles.push({
         x, y,
@@ -205,6 +219,7 @@ export function createFx(canvas, enabled) {
         vy: Math.sin(angle) * speed - 2,
         size: 2 + Math.random() * 3 * power,
         color: colors[i % colors.length],
+        gravity: rays ? 0.02 : 0.12,
         life, maxLife: life,
       });
     }
@@ -224,29 +239,39 @@ export function createFx(canvas, enabled) {
     slowMo(ms) {
       slowUntil = performance.now() + ms;
     },
-    // Hechizo: un proyectil por color sale de `from`, vuela hasta `to` y estalla allí.
-    // `onHit` se llama al impactar (o al momento si los efectos están apagados).
-    spell(from, to, colors, { power = 1, onHit } = {}) {
+    // Hechizo: proyectiles (uno por color) salen de `from`, vuelan hasta `to` y estallan allí.
+    // `foco` cambia el vuelo (orbe, cometa, rayo, gemelos, espiral) y `sello` el estallido
+    // (onda, estrella, nova, glitch, supernova). `onHit` se llama al impactar (o al momento sin efectos).
+    spell(from, to, colors, { power = 1, foco = 'orbe', sello = 'onda', onHit } = {}) {
       if (!enabled() || !colors.length) {
         onHit?.();
         return;
       }
       const a = centerOf(from);
       const b = centerOf(to);
-      const flight = 18; // fotogramas
-      colors.forEach((color, i) => {
-        const bend = (i - (colors.length - 1) / 2) * 70 + (Math.random() - 0.5) * 40;
+      const flight = foco === 'rayo' ? 9 : 18; // fotogramas
+      const shots = foco === 'gemelos' ? colors.flatMap((c) => [c, c]) : colors;
+      shots.forEach((color, i) => {
+        const spread = (i - (shots.length - 1) / 2) * (foco === 'gemelos' ? 45 : 70);
+        const bend = foco === 'rayo' ? 0 : spread + (Math.random() - 0.5) * 40;
         particles.push({
           kind: 'bolt', x: a.x, y: a.y, x0: a.x, y0: a.y, x1: b.x, y1: b.y,
-          cx: (a.x + b.x) / 2 + bend, cy: Math.min(a.y, b.y) - 60 - Math.abs(bend) / 2,
-          t: 0, speed: 1 / flight, delay: i * 2, size: 5 + power * 2, color, life: 1,
+          cx: (a.x + b.x) / 2 + bend,
+          cy: foco === 'rayo' ? (a.y + b.y) / 2 : Math.min(a.y, b.y) - 60 - Math.abs(bend) / 2,
+          t: 0, speed: 1 / flight, delay: foco === 'rayo' ? i : i * 2, size: 5 + power * 2, color, life: 1,
+          trail: foco === 'cometa',
+          spin: foco === 'espiral' ? 34 : 0, phase: (i / shots.length) * Math.PI * 2,
         });
       });
       start();
-      const delayFrames = flight + (colors.length - 1) * 2;
+      const delayFrames = flight + (shots.length - 1) * (foco === 'rayo' ? 1 : 2);
       setTimeout(() => {
-        sparks(b, colors, Math.round(20 * power), power);
-        colors.forEach((color, i) => ring(b, color, power + i * 0.15));
+        const star = sello === 'estrella' || sello === 'supernova';
+        const nova = sello === 'nova' || sello === 'supernova';
+        sparks(b, colors, Math.round((star ? 34 : 20) * power), power, star ? 8 : 0);
+        if (sello === 'supernova') sparks(b, ['#ffffff', ...colors], Math.round(24 * power), power * 1.3);
+        const rings = nova ? [...colors, '#ffffff', ...colors] : colors;
+        rings.forEach((color, i) => ring(b, color, (nova ? 1.2 : 1) * power + i * 0.15));
         start();
         onHit?.();
       }, (delayFrames * 1000) / 60);

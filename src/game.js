@@ -9,6 +9,9 @@ import {
 } from './learning.js';
 import { createCell, createKeyboard, polygonPoints, dotColorsOf } from './render.js';
 import { createWarmup } from './warmup.js';
+import {
+  SLOTS, RARITIES, ITEMS, itemOf, createHero, heroLevel, slotUnlocked, openChest, equip, loadout,
+} from './loot.js';
 
 const BLOCKS_PER_SESSION = 3;
 const HITS_PER_BLOCK = 12;
@@ -54,6 +57,7 @@ function createChoiceList(container, onPick) {
       el.className = 'option';
       el.classList.toggle('selected', i === selected);
       el.classList.toggle('disabled', Boolean(item.disabled));
+      if (item.tone) el.classList.add(...item.tone.split(' '));
       el.innerHTML = `<kbd>${i + 1}</kbd><span><b>${item.name}</b><small>${item.disabled ? item.lockedText : item.desc}</small></span>`;
       el.addEventListener('click', () => {
         el.blur();
@@ -66,9 +70,11 @@ function createChoiceList(container, onPick) {
   }
 
   return {
-    set(newItems) {
+    // `keep`: conserva la opción seleccionada (para volver a pintar la misma lista).
+    set(newItems, { keep = false } = {}) {
       items = newItems;
-      selected = Math.max(items.findIndex((item) => !item.disabled), 0);
+      selected = keep ? Math.min(selected, items.length - 1)
+        : Math.max(items.findIndex((item) => !item.disabled), 0);
       render();
     },
     handleKey(e) {
@@ -95,6 +101,9 @@ export function createGame({ data, settings, senses, fx, persist }) {
   progress.reading ??= createProgress(); // estadísticas de lectura, separadas de las de escritura
   progress.numbers ??= createProgress(); // lectura de números del 1 al 10
   progress.numWrite ??= createProgress(); // escritura de números en la aventura
+  progress.hero ??= createHero(); // equipo y cofres
+  const hero = progress.hero;
+  const heroLvl = () => heroLevel([progress, progress.numWrite]);
   const level = LEVELS[0];
   const cell = createCell($('cell'));
   const keyboard = createKeyboard($('keyboard'));
@@ -147,6 +156,11 @@ export function createGame({ data, settings, senses, fx, persist }) {
         name: 'Aventura',
         desc: 'Escribe braille para lanzar hechizos. Letras o números · 3 combates, unos 10 min.',
         start: showSubjects,
+      },
+      {
+        name: 'Equipo',
+        desc: `Nivel ${heroLvl()} · ${hero.owned.length}/${ITEMS.length} objetos. Elige foco, sello y aura.`,
+        start: showGear,
       },
       {
         name: 'Calentamiento',
@@ -229,6 +243,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
     session = {
       subject, block: 0, firstTry: 0, answered: 0, bestCombo: 0, newLetters: [], review: createReview(),
       readNext: true, readFirst: 0, readTotal: 0, orderIn: ORDER_EVERY, orderQueue: [],
+      levelSeen: heroLvl(), drop: null,
     };
     combo = 0;
     startBlock();
@@ -244,6 +259,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
     block = null;
     combo = 0;
     $('screen-battle').classList.add('practice');
+    applyAura();
     showScreen('battle');
     turn = null;
     nextTurn();
@@ -257,7 +273,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
 
   function startBlock() {
     const enemy = ENEMIES[session.block % ENEMIES.length];
-    block = { enemy, hp: HITS_PER_BLOCK };
+    block = { enemy, hp: HITS_PER_BLOCK, firstTry: 0, answered: 0 };
+    applyAura();
     $('enemy-shape').setAttribute('points', polygonPoints(enemy.sides, 46));
     $('enemy').style.setProperty('--enemy', enemy.color);
     $('enemy').classList.remove('defeated');
@@ -430,6 +447,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
       recordAnswer(sp(), item, { correct: true, hinted: turn.hinted });
       session.firstTry += 1;
       session.answered += 1;
+      block.firstTry += 1;
+      block.answered += 1;
     }
     turn.attempted = true;
     turn.pos = turn.cells.length;
@@ -446,9 +465,15 @@ export function createGame({ data, settings, senses, fx, persist }) {
     senses.vibrate([25, 30, 25]);
     // Más combo, hechizo más fuerte: proyectiles más grandes, más chispas y más temblor.
     const power = 1 + Math.min(combo, 10) * 0.08;
+    const gear = loadout(hero, heroLvl());
     fx.spell(cell.el, $('enemy-shape'), turn.cells.flatMap(dotColorsOf), {
       power,
-      onHit: () => hitEnemy(combo),
+      foco: gear.foco,
+      sello: gear.sello,
+      onHit: () => {
+        sealFlash(gear.sello);
+        hitEnemy(combo);
+      },
     });
     const praise = turn.orderLast ? '¡Cuenta completa!' : turn.isReview ? '¡Revancha ganada!' : PRAISE[combo % PRAISE.length];
     message(combo >= 3 ? `${praise} Combo ×${combo}` : praise, 'good');
@@ -485,6 +510,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
       recordAnswer(sp(), turn.item, { correct: false, hinted: turn.hinted, answeredAs });
       scheduleReview(session.review, turn.item);
       session.answered += 1;
+      if (block) block.answered += 1;
       persist();
     }
     turn.attempted = true;
@@ -554,6 +580,12 @@ export function createGame({ data, settings, senses, fx, persist }) {
     restart($('screen-battle'), 'quake-big');
     senses.victory();
     message(`${block.enemy.name} derrotado.`, 'good');
+    // Cofre: siempre un objeto nuevo; acertar a la primera mejora la rareza.
+    // levelSeen = nivel al empezar este combate, para anunciar si se ha subido.
+    const quality = block.answered ? block.firstTry / block.answered : 0;
+    session.drop = { item: openChest(hero, quality), levelBefore: session.levelSeen };
+    session.levelSeen = heroLvl();
+    persist();
     later(() => {
       session.block += 1;
       if (session.block >= BLOCKS_PER_SESSION) endSession();
@@ -764,6 +796,99 @@ export function createGame({ data, settings, senses, fx, persist }) {
     }
   }
 
+  // ---------- Equipo y botín ----------
+
+  function applyAura() {
+    const aura = loadout(hero, heroLvl()).aura;
+    for (const id of [...$('cell').classList]) if (id.startsWith('aura-')) $('cell').classList.remove(id);
+    $('cell').classList.add(`aura-${aura}`);
+  }
+
+  // Parte del sello que no son partículas: destello (nova) o corrupción de pantalla (glitch).
+  function sealFlash(sello) {
+    if (sello === 'nova' || sello === 'supernova') restart($('screen-battle'), 'flash-nova');
+    if (sello === 'glitch' || sello === 'supernova') restart($('screen-battle'), 'glitch');
+  }
+
+  const rarityName = (item) => RARITIES[item.rarity].name;
+
+  // Tarjeta del cofre en la pausa o al final: objeto, nivel nuevo y huecos que se abren.
+  function lootHtml() {
+    const { drop } = session;
+    if (!drop) return '';
+    const lvl = heroLvl();
+    const opened = Object.entries(SLOTS)
+      .filter(([, slot]) => slot.level > drop.levelBefore && slot.level <= lvl)
+      .map(([, slot]) => `Hueco nuevo: <b>${slot.name}</b> (${slot.desc}).`);
+    const levelUp = lvl > drop.levelBefore ? `<p class="level-up">¡Nivel ${lvl}!</p>` : '';
+    if (!drop.item) {
+      return `${levelUp}<div class="loot-card"><b>Cofre vacío</b><small>Ya tienes todo el equipo. Respeto.</small></div>`;
+    }
+    const { item } = drop;
+    const unlocked = slotUnlocked(item.slot, lvl);
+    const equipped = hero.equipped[item.slot] === item.id;
+    const action = !unlocked
+      ? `<small class="muted">${SLOTS[item.slot].name} se abre en el nivel ${SLOTS[item.slot].level}.</small>`
+      : equipped ? '<small class="good">Equipado.</small>'
+        : '<small><kbd>E</kbd> equipar ahora</small>';
+    return `${levelUp}${opened.map((t) => `<p class="slot-new">${t}</p>`).join('')}
+      <div class="loot-card rarity-${item.rarity}">
+        <div class="chest" aria-hidden="true"></div>
+        <span class="loot-rarity">${rarityName(item)} · ${SLOTS[item.slot].name}</span>
+        <b>${item.name}</b>
+        <small>${item.desc}</small>
+        ${action}
+      </div>`;
+  }
+
+  function equipDrop() {
+    if (screen === 'end' && session.block < BLOCKS_PER_SESSION) return; // salió con Esc: no hay cofre a la vista
+    const item = session?.drop?.item;
+    if (!item || !equip(hero, item.id, heroLvl())) return;
+    persist();
+    senses.success(0, 1);
+    const el = $(screen === 'end' ? 'end-loot' : 'break-loot');
+    el.innerHTML = lootHtml();
+    el.querySelector('.loot-card')?.classList.add('no-anim');
+  }
+
+  const gearList = createChoiceList($('gear-options'), (option) => {
+    if (equip(hero, option.id, heroLvl())) {
+      persist();
+      senses.success(0, 1);
+    }
+    renderGear(true);
+  });
+
+  function renderGear(keep = false) {
+    const lvl = heroLvl();
+    $('gear-summary').innerHTML = Object.entries(SLOTS).map(([id, slot]) => {
+      const open = slotUnlocked(id, lvl);
+      const item = itemOf(loadout(hero, lvl)[id]);
+      return `<div class="${open ? '' : 'locked'}"><span>${slot.name}</span><b>${open ? item.name : `Nivel ${slot.level}`}</b></div>`;
+    }).join('');
+    $('gear-level').textContent = `Nivel ${lvl} · ${hero.owned.length}/${ITEMS.length} objetos · ${hero.chests} cofres abiertos`;
+    const owned = ITEMS.filter((item) => hero.owned.includes(item.id));
+    gearList.set(owned.map((item) => {
+      const equipped = hero.equipped[item.slot] === item.id;
+      return {
+        id: item.id,
+        name: `${SLOTS[item.slot].name} · ${item.name}${equipped ? ' ✓' : ''}`,
+        desc: `${rarityName(item)} — ${item.desc}`,
+        disabled: !slotUnlocked(item.slot, lvl),
+        lockedText: `${rarityName(item)} — se equipa en el nivel ${SLOTS[item.slot].level}`,
+        tone: `rarity-${item.rarity}${equipped ? ' equipped' : ''}`,
+      };
+    }), { keep });
+  }
+
+  function showGear() {
+    input.disable();
+    setHud('Equipo');
+    renderGear();
+    showScreen('gear');
+  }
+
   // ---------- Pausa y final ----------
 
   function statsHtml() {
@@ -785,6 +910,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
   function showBreak() {
     $('break-title').textContent = `Bloque ${session.block}/${BLOCKS_PER_SESSION} completado`;
     $('break-stats').innerHTML = statsHtml();
+    $('break-loot').innerHTML = lootHtml();
     $('break-continue').innerHTML = shouldRead()
       ? '<kbd>Enter</kbd> ronda de lectura · <kbd>Esc</kbd> terminar por hoy'
       : '<kbd>Enter</kbd> siguiente bloque · <kbd>Esc</kbd> terminar por hoy';
@@ -793,6 +919,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
 
   function endSession() {
     $('end-stats').innerHTML = statsHtml();
+    // El cofre solo se enseña si la sesión acaba al derrotar al último enemigo (no al salir con Esc).
+    $('end-loot').innerHTML = session.block >= BLOCKS_PER_SESSION ? lootHtml() : '';
     showScreen('end');
     senses.speak('Sesión completa');
   }
@@ -853,8 +981,13 @@ export function createGame({ data, settings, senses, fx, persist }) {
           if (!e.repeat) onReadAnswer(e.key.toLowerCase());
         }
         break;
+      case 'gear':
+        if (esc) showMenu();
+        else gearList.handleKey(e);
+        break;
       case 'break':
-        if (isEnter(e)) {
+        if (e.code === 'KeyE') equipDrop();
+        else if (isEnter(e)) {
           e.preventDefault();
           continueAfterBreak();
         } else if (esc) {
@@ -862,7 +995,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
         }
         break;
       case 'end':
-        if (isEnter(e)) {
+        if (e.code === 'KeyE') equipDrop();
+        else if (isEnter(e)) {
           e.preventDefault();
           startSession();
         } else if (esc) {

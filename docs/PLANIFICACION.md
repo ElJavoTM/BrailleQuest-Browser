@@ -227,7 +227,7 @@ Como el juego será **gratuito para otros**, antes de publicarlo:
 ## 8. Pendiente para la Fase 2 (vertical slice)
 
 **Prioridad tras R1** (lo más divertido es el combate y pides más combate, efectos y equipables):
-1. Personaje con progresión y **equipables** (RF-12) + **botín sorpresa** que los suelte (RF-33)
+1. ~~Personaje con progresión y **equipables** (RF-12) + **botín sorpresa** que los suelte (RF-33)~~ ✅ (falta el compañero mascota)
 2. **Jefe de región** con palabras (RF-13)
 3. Más tipos de encuentro y rotación (RF-37) para que el combate no se repita
 4. Mapa del mundo (RF-10)
@@ -235,9 +235,9 @@ Como el juego será **gratuito para otros**, antes de publicarlo:
 
 Requisitos aún sin montar:
 - [ ] Mapa del mundo (RF-10) — de momento solo existe el Bosque de los Diez, sin mapa
-- [ ] Personaje con progresión y compañero (RF-12)
+- [x] Personaje con progresión y equipo (RF-12) — falta el compañero
 - [ ] Jefe de región con palabras (RF-13)
-- [ ] Botín sorpresa (RF-33) — los cristales de letra (RF-14) ya existen
+- [x] Botín sorpresa (RF-33): cofre por enemigo derrotado
 - [ ] Misiones diarias (RF-15)
 - [ ] Más tipos de encuentro: *Eco*, *Espejo*, *Forja* (§2) y rotarlos (RF-37)
 - [ ] Mnemotecnias por letra (RF-06)
