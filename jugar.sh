@@ -8,6 +8,5 @@ PORT="${PORT:-8000}"
 while lsof -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; do PORT=$((PORT + 1)); done
 URL="http://localhost:$PORT"
 
-echo "BrailleQuest en $URL  (Ctrl+C para salir)"
 ( sleep 0.8 && open "$URL" ) &
-exec python3 -m http.server "$PORT" --bind 127.0.0.1
+exec python3 serve.py "$PORT"

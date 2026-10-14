@@ -247,9 +247,9 @@ Requisitos aún sin montar:
 - [ ] Validar la paleta de colores con simulación de daltonismo (§11 de requisitos)
 
 Tareas técnicas:
-- [ ] Primer commit del repositorio
+- [x] Primer commit del repositorio
 - [ ] `README.md` con cómo jugar
-- [ ] `jugar.sh`: opción de no abrir el navegador del sistema (para usar Simple Browser de VS Code)
+- [x] Servidor local sin caché (`serve.py`, lo usa `jugar.sh`): el navegador siempre carga la última versión
 
 ## 9. Próximos pasos
 

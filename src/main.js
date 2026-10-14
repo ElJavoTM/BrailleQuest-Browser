@@ -3,7 +3,7 @@ import { load, save } from './storage.js';
 import { createProgress } from './learning.js';
 import { createSenses } from './senses.js';
 import { createInput } from './input.js';
-import { applyDotColors, createFx } from './render.js';
+import { applyDotColors, createFx, createDigitTicker } from './render.js';
 import { createGame } from './game.js';
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -90,6 +90,18 @@ document.getElementById('btn-calm').addEventListener('click', (e) => {
   applySettings();
   persist();
 });
+
+// Tecla «-»: mientras se mantiene pulsada se ve el mini signo generador con los dígitos en bucle.
+// Va en fase de captura para que funcione en cualquier pantalla, antes que el resto de teclas.
+const ticker = createDigitTicker(document.getElementById('ticker'));
+const isMinus = (e) => e.key === '-' || e.code === 'NumpadSubtract';
+window.addEventListener('keydown', (e) => {
+  if (!isMinus(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+  e.preventDefault();
+  ticker.start();
+}, true);
+window.addEventListener('keyup', (e) => { if (isMinus(e)) ticker.stop(); }, true);
+window.addEventListener('blur', () => ticker.stop());
 
 applySettings();
 game.showMenu();

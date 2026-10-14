@@ -13,6 +13,10 @@ import { createWarmup } from './warmup.js';
 const BLOCKS_PER_SESSION = 3;
 const HITS_PER_BLOCK = 12;
 const NEXT_TURN_MS = 750;
+// Golpe: congelado con flashes y luego retroceso con retraso. Deben cuadrar con los % de
+// @keyframes impact / impact-crit en main.css (160 ms de 700, 220 ms de 900).
+const FREEZE_MS = { normal: 160, crit: 220 };
+const IMPACT_MS = { normal: 700, crit: 900 };
 const RETRY_MS = 1300;
 const READ_ITEMS_ADVENTURE = 6;
 // Ronda en orden (números): cada ORDER_EVERY turnos, del 1 al último aprendido, si hay ≥ MIN_ORDER.
@@ -452,7 +456,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
     renderCombo();
     renderCrystals();
 
-    later(() => (block.hp <= 0 ? defeatEnemy() : nextTurn()), NEXT_TURN_MS);
+    // El último golpe espera a que el enemigo termine de salir despedido antes de derrotarlo.
+    later(() => (block.hp <= 0 ? defeatEnemy() : nextTurn()), block.hp <= 0 ? NEXT_TURN_MS + 600 : NEXT_TURN_MS);
   }
 
   function onCountCorrect(mask) {
@@ -519,18 +524,31 @@ export function createGame({ data, settings, senses, fx, persist }) {
     el.classList.add(className);
   }
 
+  let hitTimer = null;
+
   function hitEnemy(hitCombo) {
-    restart($('enemy'), 'hit');
-    restart($('screen-battle'), hitCombo >= 5 ? 'quake-big' : 'quake');
     const crit = hitCombo >= 5;
-    const pop = document.createElement('div');
-    pop.className = `damage${crit ? ' crit' : ''}`;
-    pop.textContent = crit ? `¡CRÍTICO! ×${hitCombo}` : hitCombo >= 3 ? `−1 ×${hitCombo}` : '−1';
-    $('enemy').append(pop);
-    setTimeout(() => pop.remove(), 900);
+    const kind = crit ? 'crit' : 'normal';
+    const enemy = $('enemy');
+    enemy.classList.toggle('crit', crit);
+    restart(enemy, 'hit');
+    fx.slowMo(FREEZE_MS[kind]); // las chispas también se quedan casi quietas en el congelado
+    clearTimeout(hitTimer);
+    hitTimer = setTimeout(() => enemy.classList.remove('hit', 'crit'), IMPACT_MS[kind]);
+    // Lo que «llega con retraso»: temblor de pantalla y número de daño, al salir despedido.
+    later(() => {
+      restart($('screen-battle'), crit ? 'quake-big' : 'quake');
+      const pop = document.createElement('div');
+      pop.className = `damage${crit ? ' crit' : ''}`;
+      pop.textContent = crit ? `¡CRÍTICO! ×${hitCombo}` : hitCombo >= 3 ? `−1 ×${hitCombo}` : '−1';
+      enemy.append(pop);
+      setTimeout(() => pop.remove(), 900);
+    }, FREEZE_MS[kind]);
   }
 
   function defeatEnemy() {
+    clearTimeout(hitTimer);
+    $('enemy').classList.remove('hit', 'crit'); // si no, la animación del golpe taparía la de derrota
     $('enemy').classList.add('defeated');
     fx.burstAt($('enemy-shape'), [block.enemy.color, '#ffffff'], 80);
     restart($('screen-battle'), 'quake-big');

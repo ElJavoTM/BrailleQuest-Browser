@@ -1,5 +1,5 @@
 // Dibujo: celda grande, teclado en pantalla, enemigo y partículas.
-import { DOTS, hasDot, dotsFromMask } from './braille.js';
+import { DOTS, hasDot, dotsFromMask, digitMask } from './braille.js';
 import { KEY_LABELS } from './input.js';
 
 // Un color fijo por punto, en todo el juego. Pendiente de validar con daltonismo (ronda R1).
@@ -92,10 +92,33 @@ export function dotColorsOf(mask) {
 
 // Partículas en un <canvas> a pantalla completa. Solo anima mientras hay partículas vivas.
 // Tres tipos: chispas (caen con gravedad), proyectiles (vuelan en curva hacia un destino) y ondas.
+// El brillo sale de sprites precalculados (un degradado por color) y no de shadowBlur, que es muy lento.
+const SPRITE_SIZE = 64;
+const sprites = new Map();
+
+function spriteOf(color) {
+  if (!sprites.has(color)) {
+    const c = document.createElement('canvas');
+    c.width = c.height = SPRITE_SIZE;
+    const g = c.getContext('2d');
+    const r = SPRITE_SIZE / 2;
+    const grad = g.createRadialGradient(r, r, 0, r, r, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.18, color);
+    grad.addColorStop(0.45, `${color}55`);
+    grad.addColorStop(1, `${color}00`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+    sprites.set(color, c);
+  }
+  return sprites.get(color);
+}
+
 export function createFx(canvas, enabled) {
   const ctx = canvas.getContext('2d');
   let particles = [];
   let running = false;
+  let slowUntil = 0; // cámara lenta (hit-stop) hasta este instante
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -111,54 +134,55 @@ export function createFx(canvas, enabled) {
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   };
 
-  function glow(color, blur) {
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = blur;
+  function glowAt(x, y, size, color) {
+    const r = size * 3.2;
+    ctx.drawImage(spriteOf(color), x - r, y - r, r * 2, r * 2);
   }
 
-  function step(p) {
+  function step(p, k) {
     if (p.kind === 'bolt') {
-      if (p.delay > 0) { p.delay -= 1; return; }
-      p.t = Math.min(p.t + p.speed, 1);
+      if (p.delay > 0) { p.delay -= k; return; }
+      p.t = Math.min(p.t + p.speed * k, 1);
       const u = 1 - p.t; // curva cuadrática de Bézier
       p.x = u * u * p.x0 + 2 * u * p.t * p.cx + p.t * p.t * p.x1;
       p.y = u * u * p.y0 + 2 * u * p.t * p.cy + p.t * p.t * p.y1;
       if (p.t >= 1) p.life = 0;
-      glow(p.color, 16);
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      glowAt(p.x, p.y, p.size, p.color);
       return;
     }
-    p.life -= 1;
-    ctx.globalAlpha = Math.max(p.life / p.maxLife, 0);
+    p.life -= k;
+    const alpha = Math.max(p.life / p.maxLife, 0);
+    ctx.globalAlpha = alpha;
     if (p.kind === 'ring') {
-      p.r += p.vr;
-      p.vr *= 0.93;
-      glow(p.color, 20);
-      ctx.lineWidth = 4 * (p.life / p.maxLife) + 1;
+      p.r += p.vr * k;
+      p.vr *= 0.93 ** k;
+      const w = 4 * alpha + 1;
+      ctx.strokeStyle = p.color;
+      ctx.globalAlpha = alpha * 0.25; // halo ancho y tenue + trazo fino: brillo sin shadowBlur
+      ctx.lineWidth = w * 4;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = w;
+      ctx.stroke();
     } else {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.12;
-      p.vx *= 0.98;
-      glow(p.color, 12);
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      p.x += p.vx * k;
+      p.y += p.vy * k;
+      p.vy += 0.12 * k;
+      p.vx *= 0.98 ** k;
+      glowAt(p.x, p.y, p.size, p.color);
     }
     ctx.globalAlpha = 1;
   }
 
-  function frame() {
+  function frame(now) {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
+    const k = now < slowUntil ? 0.15 : 1;
     particles = particles.filter((p) => p.life > 0);
-    particles.forEach(step);
+    ctx.globalCompositeOperation = 'lighter'; // los brillos se suman, como luz de neón
+    for (const p of particles) step(p, k);
+    ctx.globalCompositeOperation = 'source-over';
     if (particles.length) requestAnimationFrame(frame);
     else running = false;
   }
@@ -196,6 +220,10 @@ export function createFx(canvas, enabled) {
       sparks(centerOf(element), colors, count);
       start();
     },
+    // Congela casi del todo las partículas durante `ms` (hit-stop del impacto).
+    slowMo(ms) {
+      slowUntil = performance.now() + ms;
+    },
     // Hechizo: un proyectil por color sale de `from`, vuela hasta `to` y estalla allí.
     // `onHit` se llama al impactar (o al momento si los efectos están apagados).
     spell(from, to, colors, { power = 1, onHit } = {}) {
@@ -218,10 +246,49 @@ export function createFx(canvas, enabled) {
       const delayFrames = flight + (colors.length - 1) * 2;
       setTimeout(() => {
         sparks(b, colors, Math.round(20 * power), power);
-        colors.forEach((color, i) => setTimeout(() => ring(b, color, power), i * 60));
+        colors.forEach((color, i) => ring(b, color, power + i * 0.15));
         start();
         onHit?.();
       }, (delayFrames * 1000) / 60);
+    },
+  };
+}
+
+// Mini signo generador (solo puntos) que recorre los dígitos 1 … 9, 0 en bucle.
+const TICKER_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+const TICKER_MS = 250; // 4 cambios por segundo
+
+export function createDigitTicker(container) {
+  const dots = DOTS.map((dot) => {
+    const d = document.createElement('i');
+    d.dataset.dot = dot;
+    d.style.gridRow = GRID[dot][0];
+    d.style.gridColumn = GRID[dot][1];
+    return d;
+  });
+  container.replaceChildren(...dots);
+  let timer = null;
+  let index = 0;
+
+  function show() {
+    const mask = digitMask(TICKER_DIGITS[index]);
+    dots.forEach((d, i) => d.classList.toggle('on', hasDot(mask, DOTS[i])));
+    index = (index + 1) % TICKER_DIGITS.length;
+  }
+
+  return {
+    // Se puede llamar en cada repetición de tecla: si ya está en marcha no hace nada.
+    start() {
+      if (timer) return;
+      index = 0;
+      show();
+      container.hidden = false;
+      timer = setInterval(show, TICKER_MS);
+    },
+    stop() {
+      clearInterval(timer);
+      timer = null;
+      container.hidden = true;
     },
   };
 }

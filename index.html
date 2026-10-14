@@ -11,7 +11,7 @@
   <canvas id="fx" aria-hidden="true"></canvas>
 
   <header class="hud">
-    <div class="brand">Braille<span>Quest</span></div>
+    <div class="brand">Braille<span>Quest</span><div id="ticker" class="ticker" aria-hidden="true" hidden></div></div>
     <div id="hud-block" class="hud-block"></div>
     <div id="hud-combo" class="hud-combo"></div>
     <div class="hud-actions">
@@ -66,9 +66,11 @@
 
     <section id="screen-battle" class="screen">
       <div id="enemy" class="enemy">
-        <svg viewBox="-60 -60 120 120" aria-hidden="true">
-          <polygon id="enemy-shape" points="" />
-        </svg>
+        <div class="enemy-body">
+          <svg viewBox="-60 -60 120 120" aria-hidden="true">
+            <polygon id="enemy-shape" points="" />
+          </svg>
+        </div>
         <div class="enemy-info">
           <div id="enemy-name" class="enemy-name"></div>
           <div class="hp"><div id="hp-fill" class="hp-fill"></div></div>

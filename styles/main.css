@@ -33,6 +33,22 @@ body {
 
 #fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
 
+/* Mini signo generador con los dígitos en bucle (tecla «-»), debajo del título de la cabecera */
+.ticker {
+  position: absolute; top: calc(100% + 40px); left: 0; z-index: 20; pointer-events: none;
+  display: grid; grid-template-columns: repeat(2, 8px); grid-template-rows: repeat(3, 8px); gap: 4px;
+  padding: 6px; border-radius: 8px; border: 1px solid #ffffffb0;
+}
+.ticker[hidden] { display: none; }
+.ticker i { border-radius: 50%; border: 1px solid #ffffff44; }
+.ticker i.on { background: var(--c); border-color: var(--c); box-shadow: 0 0 calc(6px * var(--glow)) var(--c); }
+.ticker i[data-dot="1"] { --c: var(--dot-1); }
+.ticker i[data-dot="2"] { --c: var(--dot-2); }
+.ticker i[data-dot="3"] { --c: var(--dot-3); }
+.ticker i[data-dot="4"] { --c: var(--dot-4); }
+.ticker i[data-dot="5"] { --c: var(--dot-5); }
+.ticker i[data-dot="6"] { --c: var(--dot-6); }
+
 kbd {
   font: inherit; font-size: .85em;
   padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg-2);
@@ -45,7 +61,7 @@ kbd {
   padding: 10px 20px; border-bottom: 1px solid var(--line);
   background: #07070fcc;
 }
-.brand { font-weight: 800; letter-spacing: .02em; }
+.brand { position: relative; font-weight: 800; letter-spacing: .02em; }
 .brand span, .logo span { color: var(--accent); text-shadow: 0 0 calc(12px * var(--glow)) var(--accent); }
 .hud-block { color: var(--muted); }
 .hud-combo { font-weight: 700; color: var(--dot-1); min-width: 90px; }
@@ -114,9 +130,20 @@ h1, h2 { margin: 0; }
   stroke: var(--enemy); stroke-width: 3;
   filter: drop-shadow(0 0 calc(10px * var(--glow)) var(--enemy));
   transform-origin: center;
-  animation: float 4s ease-in-out infinite;
 }
-.enemy.hit polygon { animation: hit .35s ease-out, float 4s ease-in-out infinite .35s; }
+/* La flotación y la sacudida mueven capas enteras (svg y su envoltorio) con transform:
+   la GPU las compone sin volver a pintar el polígono ni su filtro de brillo. */
+.enemy svg { animation: float 4s ease-in-out infinite; will-change: transform; }
+.enemy-body { will-change: transform; }
+
+/* Impacto en dos tiempos: primero el enemigo se congela y flashea (sin moverse, también sin
+   flotar) y después sale despedido de golpe, como si el impacto llegara con retraso.
+   Las duraciones del congelado están en game.js (FREEZE_MS); los % de abajo las respetan. */
+.enemy.hit svg { animation-play-state: paused; }
+.enemy.hit .enemy-body { animation: impact .7s; }
+.enemy.hit polygon { animation: impact-color .7s steps(1, end); }
+.enemy.hit.crit .enemy-body { animation: impact-crit .9s; }
+.enemy.hit.crit polygon { animation: impact-color-crit .9s steps(1, end); }
 .enemy.defeated polygon { animation: defeat .9s ease-in forwards; }
 .enemy-info { text-align: left; }
 .enemy-name { font-weight: 700; color: var(--enemy); margin-bottom: 6px; }
@@ -124,10 +151,50 @@ h1, h2 { margin: 0; }
 .hp-fill { height: 100%; background: var(--enemy); box-shadow: 0 0 10px var(--enemy); transition: width .3s ease-out; }
 
 @keyframes float { 50% { transform: translateY(-6px) rotate(6deg); } }
-@keyframes hit {
-  0% { transform: scale(1); fill: #ffffff55; }
-  30% { transform: scale(.85) rotate(-8deg); }
-  100% { transform: scale(1); }
+/* 0–22,8 % (160 ms): quieto. 23 %: retroceso instantáneo. Después rebota hasta asentarse. */
+@keyframes impact {
+  0%, 22.8% { transform: none; }
+  23%  { transform: translate(18px, -14px) scale(.84) rotate(14deg); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  42%  { transform: translate(-10px, 6px) scale(1.05) rotate(-7deg); animation-timing-function: ease-in-out; }
+  58%  { transform: translate(6px, -3px) rotate(3deg); }
+  74%  { transform: translate(-3px, 1px) rotate(-1deg); }
+  88%  { transform: translate(1px, 0); }
+  100% { transform: none; }
+}
+/* Crítico: 0–24,3 % (220 ms) quieto y un retroceso más bestia. */
+@keyframes impact-crit {
+  0%, 24.3% { transform: none; }
+  24.5% { transform: translate(28px, -22px) scale(.76) rotate(24deg); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  40%  { transform: translate(-16px, 9px) scale(1.1) rotate(-12deg); animation-timing-function: ease-in-out; }
+  54%  { transform: translate(10px, -5px) scale(.97) rotate(6deg); }
+  68%  { transform: translate(-5px, 2px) rotate(-3deg); }
+  82%  { transform: translate(2px, -1px) rotate(1deg); }
+  100% { transform: none; }
+}
+/* Flashes durante el congelado (blanco ↔ colores invertidos) y, al salir despedido,
+   relleno invertido que se va apagando. Cada keyframe es un fotograma fijo (steps). */
+@keyframes impact-color {
+  0%   { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 22px #fff); }
+  5%   { fill: var(--enemy); stroke: var(--bg); filter: drop-shadow(0 0 14px var(--enemy)); }
+  10%  { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 22px #fff); }
+  15%  { fill: var(--bg); stroke: #fff; filter: drop-shadow(0 0 14px #fff); }
+  19%  { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 22px #fff); }
+  23%  { fill: var(--enemy); stroke: var(--bg); filter: drop-shadow(0 0 18px var(--enemy)); }
+  42%  { fill: color-mix(in srgb, var(--enemy) 55%, transparent); stroke: #fff; }
+  58%  { fill: color-mix(in srgb, var(--enemy) 30%, transparent); stroke: var(--enemy); }
+  74%  { fill: color-mix(in srgb, var(--enemy) 12%, transparent); stroke: var(--enemy); }
+}
+@keyframes impact-color-crit {
+  0%   { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 28px #fff); }
+  4%   { fill: var(--dot-1); stroke: var(--bg); filter: drop-shadow(0 0 20px var(--dot-1)); }
+  8%   { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 28px #fff); }
+  12%  { fill: var(--enemy); stroke: var(--bg); filter: drop-shadow(0 0 18px var(--enemy)); }
+  16%  { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 28px #fff); }
+  20%  { fill: var(--bg); stroke: var(--dot-1); filter: drop-shadow(0 0 20px var(--dot-1)); }
+  24.5% { fill: var(--dot-1); stroke: var(--bg); filter: drop-shadow(0 0 24px var(--dot-1)); }
+  40%  { fill: var(--enemy); stroke: #fff; }
+  54%  { fill: color-mix(in srgb, var(--enemy) 40%, transparent); stroke: #fff; }
+  68%  { fill: color-mix(in srgb, var(--enemy) 12%, transparent); stroke: var(--enemy); }
 }
 @keyframes defeat { to { transform: scale(1.8) rotate(90deg); opacity: 0; } }
 
