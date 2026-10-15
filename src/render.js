@@ -118,7 +118,7 @@ export function createFx(canvas, enabled) {
   const ctx = canvas.getContext('2d');
   let particles = [];
   let running = false;
-  let slowUntil = 0; // cámara lenta (hit-stop) hasta este instante
+  let last = 0;
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -139,6 +139,8 @@ export function createFx(canvas, enabled) {
     ctx.drawImage(spriteOf(color), x - r, y - r, r * 2, r * 2);
   }
 
+  // `k` = tiempo transcurrido en «fotogramas de 60 Hz»: la simulación va igual a 60, 120 Hz
+  // o con fotogramas perdidos (antes avanzaba por fotograma y en pantallas de 120 Hz iba al doble).
   function step(p, k) {
     if (p.kind === 'bolt') {
       if (p.delay > 0) { p.delay -= k; return; }
@@ -151,9 +153,15 @@ export function createFx(canvas, enabled) {
         p.x += Math.cos(angle) * p.spin * u;
         p.y += Math.sin(angle) * p.spin * u;
       }
-      if (p.trail) trail.push({ x: p.x, y: p.y, size: p.size * 0.6, color: p.color, life: 10, maxLife: 10 });
-      if (p.t >= 1) p.life = 0;
+      if (p.trail && (p.trailAcc = (p.trailAcc ?? 0) + k) >= 1) {
+        p.trailAcc = 0;
+        trail.push({ x: p.x, y: p.y, size: p.size * 0.6, color: p.color, life: 10, maxLife: 10 });
+      }
       glowAt(p.x, p.y, p.size, p.color);
+      if (p.t >= 1) {
+        p.life = 0;
+        p.group.arrived();
+      }
       return;
     }
     p.life -= k;
@@ -187,8 +195,10 @@ export function createFx(canvas, enabled) {
   const trail = []; // estela del foco Cometa, se añade a las partículas en cada fotograma
 
   function frame(now) {
+    // Tope de 3 fotogramas por paso: tras un parón no hay saltos bruscos.
+    const k = Math.min((now - last) / (1000 / 60), 3);
+    last = now;
     ctx.clearRect(0, 0, innerWidth, innerHeight);
-    const k = now < slowUntil ? 0.15 : 1;
     particles.push(...trail.splice(0));
     particles = particles.filter((p) => p.life > 0);
     ctx.globalCompositeOperation = 'lighter'; // los brillos se suman, como luz de neón
@@ -201,6 +211,7 @@ export function createFx(canvas, enabled) {
   function start() {
     if (!running) {
       running = true;
+      last = performance.now();
       requestAnimationFrame(frame);
     }
   }
@@ -235,27 +246,25 @@ export function createFx(canvas, enabled) {
       sparks(centerOf(element), colors, count);
       start();
     },
-    // Congela casi del todo las partículas durante `ms` (hit-stop del impacto).
-    slowMo(ms) {
-      slowUntil = performance.now() + ms;
-    },
-    // Hechizo: proyectiles (uno por color) salen de `from`, vuelan hasta `to` y estallan allí.
-    // `foco` cambia el vuelo (orbe, cometa, rayo, gemelos, espiral) y `sello` el estallido
-    // (onda, estrella, nova, glitch, supernova). `onHit` se llama al impactar (o al momento sin efectos).
-    spell(from, to, colors, { power = 1, foco = 'orbe', sello = 'onda', onHit } = {}) {
+    // Hechizo: proyectiles (uno por color) salen de `from` y vuelan hasta `to`.
+    // `foco` cambia el vuelo (orbe, cometa, rayo, gemelos, espiral). `onHit` se llama cuando llega
+    // el último proyectil, en el mismo fotograma (o al momento si los efectos están apagados).
+    spell(from, to, colors, { power = 1, foco = 'orbe', onHit } = {}) {
       if (!enabled() || !colors.length) {
         onHit?.();
         return;
       }
       const a = centerOf(from);
       const b = centerOf(to);
-      const flight = foco === 'rayo' ? 9 : 18; // fotogramas
+      const flight = foco === 'rayo' ? 9 : 18; // fotogramas de 60 Hz
       const shots = foco === 'gemelos' ? colors.flatMap((c) => [c, c]) : colors;
+      let pending = shots.length;
+      const group = { arrived: () => { if (--pending === 0) onHit?.(); } };
       shots.forEach((color, i) => {
         const spread = (i - (shots.length - 1) / 2) * (foco === 'gemelos' ? 45 : 70);
         const bend = foco === 'rayo' ? 0 : spread + (Math.random() - 0.5) * 40;
         particles.push({
-          kind: 'bolt', x: a.x, y: a.y, x0: a.x, y0: a.y, x1: b.x, y1: b.y,
+          kind: 'bolt', group, x: a.x, y: a.y, x0: a.x, y0: a.y, x1: b.x, y1: b.y,
           cx: (a.x + b.x) / 2 + bend,
           cy: foco === 'rayo' ? (a.y + b.y) / 2 : Math.min(a.y, b.y) - 60 - Math.abs(bend) / 2,
           t: 0, speed: 1 / flight, delay: foco === 'rayo' ? i : i * 2, size: 5 + power * 2, color, life: 1,
@@ -264,17 +273,18 @@ export function createFx(canvas, enabled) {
         });
       });
       start();
-      const delayFrames = flight + (shots.length - 1) * (foco === 'rayo' ? 1 : 2);
-      setTimeout(() => {
-        const star = sello === 'estrella' || sello === 'supernova';
-        const nova = sello === 'nova' || sello === 'supernova';
-        sparks(b, colors, Math.round((star ? 34 : 20) * power), power, star ? 8 : 0);
-        if (sello === 'supernova') sparks(b, ['#ffffff', ...colors], Math.round(24 * power), power * 1.3);
-        const rings = nova ? [...colors, '#ffffff', ...colors] : colors;
-        rings.forEach((color, i) => ring(b, color, (nova ? 1.2 : 1) * power + i * 0.15));
-        start();
-        onHit?.();
-      }, (delayFrames * 1000) / 60);
+    },
+    // Estallido del impacto en `element`. `sello`: onda, estrella, nova, glitch, supernova.
+    explode(element, colors, { power = 1, sello = 'onda' } = {}) {
+      if (!enabled() || !colors.length) return;
+      const b = centerOf(element);
+      const star = sello === 'estrella' || sello === 'supernova';
+      const nova = sello === 'nova' || sello === 'supernova';
+      sparks(b, colors, Math.round((star ? 34 : 22) * power), power, star ? 8 : 0);
+      if (sello === 'supernova') sparks(b, ['#ffffff', ...colors], Math.round(24 * power), power * 1.3);
+      const rings = nova ? [...colors, '#ffffff', ...colors] : colors;
+      rings.forEach((color, i) => ring(b, color, (nova ? 1.2 : 1) * power + i * 0.15));
+      start();
     },
   };
 }

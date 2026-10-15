@@ -138,63 +138,53 @@ h1, h2 { margin: 0; }
 
 /* Impacto en dos tiempos: primero el enemigo se congela y flashea (sin moverse, también sin
    flotar) y después sale despedido de golpe, como si el impacto llegara con retraso.
-   Las duraciones del congelado están en game.js (FREEZE_MS); los % de abajo las respetan. */
+   Las duraciones del congelado están en game.js (FREEZE_MS); los % de abajo las respetan.
+   El movimiento es suave (curvas con rebote); solo el destello del congelado va a golpes. */
 .enemy.hit svg { animation-play-state: paused; }
-.enemy.hit .enemy-body { animation: impact .7s; }
-.enemy.hit polygon { animation: impact-color .7s steps(1, end); }
-.enemy.hit.crit .enemy-body { animation: impact-crit .9s; }
-.enemy.hit.crit polygon { animation: impact-color-crit .9s steps(1, end); }
+.enemy.hit .enemy-body { animation: impact .64s linear; }
+.enemy.hit polygon { animation: impact-color .64s linear; }
+.enemy.hit.crit .enemy-body { animation: impact-crit .82s linear; }
+.enemy.hit.crit polygon { animation: impact-color-crit .82s linear; }
 .enemy.defeated polygon { animation: defeat .9s ease-in forwards; }
 .enemy-info { text-align: left; }
 .enemy-name { font-weight: 700; color: var(--enemy); margin-bottom: 6px; }
 .hp { width: 200px; height: 10px; border-radius: 99px; background: var(--bg-2); border: 1px solid var(--line); overflow: hidden; }
-.hp-fill { height: 100%; background: var(--enemy); box-shadow: 0 0 10px var(--enemy); transition: width .3s ease-out; }
+.hp-fill { height: 100%; background: var(--enemy); box-shadow: 0 0 10px var(--enemy); transform-origin: left; transition: transform .3s ease-out; }
 
 @keyframes float { 50% { transform: translateY(-6px) rotate(6deg); } }
-/* 0–22,8 % (160 ms): quieto. 23 %: retroceso instantáneo. Después rebota hasta asentarse. */
+/* 0–17 % (110 ms): quieto. Luego retroceso rápido con frenada, rebote y asentamiento. */
 @keyframes impact {
-  0%, 22.8% { transform: none; }
-  23%  { transform: translate(18px, -14px) scale(.84) rotate(14deg); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
-  42%  { transform: translate(-10px, 6px) scale(1.05) rotate(-7deg); animation-timing-function: ease-in-out; }
-  58%  { transform: translate(6px, -3px) rotate(3deg); }
-  74%  { transform: translate(-3px, 1px) rotate(-1deg); }
-  88%  { transform: translate(1px, 0); }
+  0%, 17% { transform: none; animation-timing-function: cubic-bezier(.1, .9, .2, 1); }
+  32%  { transform: translate(20px, -15px) scale(.86) rotate(13deg); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  58%  { transform: translate(-7px, 4px) scale(1.04) rotate(-5deg); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  80%  { transform: translate(2px, -1px) rotate(1.5deg); animation-timing-function: ease-out; }
   100% { transform: none; }
 }
-/* Crítico: 0–24,3 % (220 ms) quieto y un retroceso más bestia. */
+/* Crítico: 0–18 % (150 ms) quieto y un retroceso más bestia. */
 @keyframes impact-crit {
-  0%, 24.3% { transform: none; }
-  24.5% { transform: translate(28px, -22px) scale(.76) rotate(24deg); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
-  40%  { transform: translate(-16px, 9px) scale(1.1) rotate(-12deg); animation-timing-function: ease-in-out; }
-  54%  { transform: translate(10px, -5px) scale(.97) rotate(6deg); }
-  68%  { transform: translate(-5px, 2px) rotate(-3deg); }
-  82%  { transform: translate(2px, -1px) rotate(1deg); }
+  0%, 18% { transform: none; animation-timing-function: cubic-bezier(.1, .9, .2, 1); }
+  33%  { transform: translate(30px, -24px) scale(.78) rotate(24deg); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  56%  { transform: translate(-12px, 7px) scale(1.08) rotate(-9deg); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  76%  { transform: translate(4px, -2px) rotate(3deg); animation-timing-function: ease-out; }
   100% { transform: none; }
 }
-/* Flashes durante el congelado (blanco ↔ colores invertidos) y, al salir despedido,
-   relleno invertido que se va apagando. Cada keyframe es un fotograma fijo (steps). */
+/* Congelado: blanco → invertido → blanco a golpes (steps). Al salir despedido, el relleno
+   invertido se apaga de forma suave. */
 @keyframes impact-color {
-  0%   { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 22px #fff); }
-  5%   { fill: var(--enemy); stroke: var(--bg); filter: drop-shadow(0 0 14px var(--enemy)); }
-  10%  { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 22px #fff); }
-  15%  { fill: var(--bg); stroke: #fff; filter: drop-shadow(0 0 14px #fff); }
-  19%  { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 22px #fff); }
-  23%  { fill: var(--enemy); stroke: var(--bg); filter: drop-shadow(0 0 18px var(--enemy)); }
-  42%  { fill: color-mix(in srgb, var(--enemy) 55%, transparent); stroke: #fff; }
-  58%  { fill: color-mix(in srgb, var(--enemy) 30%, transparent); stroke: var(--enemy); }
-  74%  { fill: color-mix(in srgb, var(--enemy) 12%, transparent); stroke: var(--enemy); }
+  0%   { fill: #fff; stroke: #fff; animation-timing-function: steps(1, end); }
+  6%   { fill: var(--enemy); stroke: var(--bg); animation-timing-function: steps(1, end); }
+  12%  { fill: #fff; stroke: #fff; animation-timing-function: steps(1, end); }
+  17%  { fill: var(--enemy); stroke: #fff; animation-timing-function: ease-out; }
+  70%  { fill: color-mix(in srgb, var(--enemy) 12%, transparent); stroke: var(--enemy); }
 }
 @keyframes impact-color-crit {
-  0%   { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 28px #fff); }
-  4%   { fill: var(--dot-1); stroke: var(--bg); filter: drop-shadow(0 0 20px var(--dot-1)); }
-  8%   { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 28px #fff); }
-  12%  { fill: var(--enemy); stroke: var(--bg); filter: drop-shadow(0 0 18px var(--enemy)); }
-  16%  { fill: #fff; stroke: #fff; filter: drop-shadow(0 0 28px #fff); }
-  20%  { fill: var(--bg); stroke: var(--dot-1); filter: drop-shadow(0 0 20px var(--dot-1)); }
-  24.5% { fill: var(--dot-1); stroke: var(--bg); filter: drop-shadow(0 0 24px var(--dot-1)); }
-  40%  { fill: var(--enemy); stroke: #fff; }
-  54%  { fill: color-mix(in srgb, var(--enemy) 40%, transparent); stroke: #fff; }
-  68%  { fill: color-mix(in srgb, var(--enemy) 12%, transparent); stroke: var(--enemy); }
+  0%   { fill: #fff; stroke: #fff; animation-timing-function: steps(1, end); }
+  5%   { fill: var(--dot-1); stroke: var(--bg); animation-timing-function: steps(1, end); }
+  10%  { fill: #fff; stroke: #fff; animation-timing-function: steps(1, end); }
+  14%  { fill: var(--enemy); stroke: var(--bg); animation-timing-function: steps(1, end); }
+  18%  { fill: var(--dot-1); stroke: #fff; animation-timing-function: ease-out; }
+  45%  { fill: var(--enemy); stroke: #fff; animation-timing-function: ease-out; }
+  75%  { fill: color-mix(in srgb, var(--enemy) 12%, transparent); stroke: var(--enemy); }
 }
 @keyframes defeat { to { transform: scale(1.8) rotate(90deg); opacity: 0; } }
 
@@ -397,6 +387,23 @@ dialog legend { color: var(--muted); padding: 0 6px; }
 .row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
 .row.range input { flex: 1; }
 dialog .chip { align-self: flex-end; margin-top: 10px; }
+dialog { max-height: 90vh; overflow-y: auto; }
+
+/* Menú de depuración */
+.debug { margin-top: 10px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; }
+.debug summary { cursor: pointer; color: var(--muted); }
+.debug[open] summary { margin-bottom: 6px; }
+.debug h3 { margin: 10px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.debug p { margin: 4px 0; font-size: 14px; }
+.debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.debug-grid .chip { align-self: stretch; margin: 0; font-size: 13px; text-align: left; }
+.chip.danger { border-color: var(--bad); color: var(--bad); }
+.debug-status:empty { display: none; }
+.debug-status { color: var(--good); }
+.debug-dump {
+  max-height: 220px; overflow: auto; margin: 6px 0 0; padding: 8px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--line); font-size: 11px; text-align: left; white-space: pre-wrap;
+}
 
 /* ---------- Equipo y botín ---------- */
 
@@ -424,20 +431,21 @@ dialog .chip { align-self: flex-end; margin-top: 10px; }
   border: 2px solid var(--rarity); background: color-mix(in srgb, var(--rarity) 15%, var(--bg));
   box-shadow: 0 0 calc(16px * var(--glow)) var(--rarity);
   transform: rotate(45deg); opacity: 0; pointer-events: none;
-  animation: chest .9s steps(1, end);
+  animation: chest .9s ease-in-out;
 }
-.loot-card > :not(.chest) { animation: loot-reveal .35s ease-out .9s backwards; }
-.loot-card { animation: loot-card .9s steps(1, end); }
+.loot-card > :not(.chest) { animation: loot-reveal .4s cubic-bezier(.2, .9, .3, 1.3) .8s backwards; }
+.loot-card { animation: loot-card .9s ease-out; }
 .loot-card.no-anim, .loot-card.no-anim > *, .loot-card.no-anim .chest { animation: none; }
 @keyframes chest {
-  0% { opacity: 1; transform: rotate(45deg); }
-  15% { transform: rotate(35deg) translateX(-3px); } 30% { transform: rotate(55deg) translateX(3px); }
-  45% { transform: rotate(30deg) translateX(-4px); } 60% { transform: rotate(60deg) translateX(4px); }
-  75% { opacity: 1; transform: rotate(45deg) scale(1.5); background: #fff; border-color: #fff; }
-  88% { opacity: .6; transform: rotate(45deg) scale(2.6); }
-  100% { opacity: 0; }
+  0% { opacity: 1; transform: rotate(45deg) scale(.6); }
+  14% { transform: rotate(45deg) scale(1); }
+  24% { transform: rotate(37deg); } 34% { transform: rotate(53deg); }
+  44% { transform: rotate(39deg); } 54% { transform: rotate(51deg); }
+  68% { opacity: 1; transform: rotate(45deg) scale(1.15); background: color-mix(in srgb, var(--rarity) 15%, var(--bg)); }
+  78% { opacity: 1; transform: rotate(45deg) scale(1.6); background: #fff; border-color: #fff; }
+  100% { opacity: 0; transform: rotate(45deg) scale(3.2); }
 }
-@keyframes loot-card { 0% { border-color: var(--line); box-shadow: none; } 75% { border-color: #fff; } }
+@keyframes loot-card { 0% { border-color: var(--line); box-shadow: none; } 78% { border-color: #fff; } }
 @keyframes loot-reveal { from { opacity: 0; transform: translateY(6px) scale(.9); } }
 
 /* Pantalla de equipo */
@@ -457,11 +465,11 @@ dialog .chip { align-self: flex-end; margin-top: 10px; }
 /* Las auras animadas van en pseudo-elementos para no pisar las animaciones de acierto/fallo de .cell */
 .aura-pulso .cell::after {
   content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
-  border: 1px solid transparent; animation: aura-pulse 1.6s ease-in-out infinite;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 calc(28px * var(--glow)) color-mix(in srgb, var(--accent) 70%, transparent);
+  opacity: 0; animation: aura-pulse 1.6s ease-in-out infinite; will-change: opacity;
 }
-@keyframes aura-pulse {
-  50% { box-shadow: 0 0 calc(28px * var(--glow)) color-mix(in srgb, var(--accent) 70%, transparent); border-color: var(--accent); }
-}
+@keyframes aura-pulse { 50% { opacity: 1; } }
 @property --aura-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .aura-circuito .cell::before {
   content: ''; position: absolute; inset: -5px; border-radius: 26px; padding: 2px; pointer-events: none;

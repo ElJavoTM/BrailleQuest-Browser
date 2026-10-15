@@ -17,9 +17,9 @@ const BLOCKS_PER_SESSION = 3;
 const HITS_PER_BLOCK = 12;
 const NEXT_TURN_MS = 750;
 // Golpe: congelado con flashes y luego retroceso con retraso. Deben cuadrar con los % de
-// @keyframes impact / impact-crit en main.css (160 ms de 700, 220 ms de 900).
-const FREEZE_MS = { normal: 160, crit: 220 };
-const IMPACT_MS = { normal: 700, crit: 900 };
+// @keyframes impact / impact-crit en main.css (110 ms de 640, 150 ms de 820).
+const FREEZE_MS = { normal: 110, crit: 150 };
+const IMPACT_MS = { normal: 640, crit: 820 };
 const RETRY_MS = 1300;
 const READ_ITEMS_ADVENTURE = 6;
 // Ronda en orden (números): cada ORDER_EVERY turnos, del 1 al último aprendido, si hay ≥ MIN_ORDER.
@@ -288,7 +288,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
   }
 
   function renderHp() {
-    $('hp-fill').style.width = `${(block.hp / HITS_PER_BLOCK) * 100}%`;
+    $('hp-fill').style.transform = `scaleX(${block.hp / HITS_PER_BLOCK})`;
   }
 
   function renderCombo() {
@@ -466,14 +466,12 @@ export function createGame({ data, settings, senses, fx, persist }) {
     // Más combo, hechizo más fuerte: proyectiles más grandes, más chispas y más temblor.
     const power = 1 + Math.min(combo, 10) * 0.08;
     const gear = loadout(hero, heroLvl());
-    fx.spell(cell.el, $('enemy-shape'), turn.cells.flatMap(dotColorsOf), {
+    const colors = turn.cells.flatMap(dotColorsOf);
+    const hitCombo = combo;
+    fx.spell(cell.el, $('enemy-shape'), colors, {
       power,
       foco: gear.foco,
-      sello: gear.sello,
-      onHit: () => {
-        sealFlash(gear.sello);
-        hitEnemy(combo);
-      },
+      onHit: () => hitEnemy(hitCombo, { colors, power, sello: gear.sello }),
     });
     const praise = turn.orderLast ? '¡Cuenta completa!' : turn.isReview ? '¡Revancha ganada!' : PRAISE[combo % PRAISE.length];
     message(combo >= 3 ? `${praise} Combo ×${combo}` : praise, 'good');
@@ -552,17 +550,19 @@ export function createGame({ data, settings, senses, fx, persist }) {
 
   let hitTimer = null;
 
-  function hitEnemy(hitCombo) {
+  // Impacto en dos tiempos: al llegar el hechizo el enemigo se congela y flashea; al acabar el
+  // congelado salen a la vez el retroceso (CSS), el estallido, el sello, el temblor y el daño.
+  function hitEnemy(hitCombo, { colors, power, sello }) {
     const crit = hitCombo >= 5;
     const kind = crit ? 'crit' : 'normal';
     const enemy = $('enemy');
     enemy.classList.toggle('crit', crit);
     restart(enemy, 'hit');
-    fx.slowMo(FREEZE_MS[kind]); // las chispas también se quedan casi quietas en el congelado
     clearTimeout(hitTimer);
     hitTimer = setTimeout(() => enemy.classList.remove('hit', 'crit'), IMPACT_MS[kind]);
-    // Lo que «llega con retraso»: temblor de pantalla y número de daño, al salir despedido.
     later(() => {
+      fx.explode($('enemy-shape'), colors, { power, sello });
+      sealFlash(sello);
       restart($('screen-battle'), crit ? 'quake-big' : 'quake');
       const pop = document.createElement('div');
       pop.className = `damage${crit ? ' crit' : ''}`;
@@ -1011,7 +1011,27 @@ export function createGame({ data, settings, senses, fx, persist }) {
     showMenu();
   });
 
+  // Atajos del menú de depuración. Devuelven false si no se pueden usar en la pantalla actual.
+  const debug = {
+    defeatEnemy() {
+      if (screen !== 'battle' || !block || session?.practice || block.hp <= 0) return false;
+      token += 1; // anula el turno pendiente
+      input.disable();
+      block.hp = 0;
+      renderHp();
+      defeatEnemy();
+      return true;
+    },
+    setCombo(n) {
+      if (screen !== 'battle') return false;
+      combo = n;
+      renderCombo();
+      return true;
+    },
+  };
+
   return {
+    debug,
     attachInput(i) { input = i; },
     onChange,
     onCommit,

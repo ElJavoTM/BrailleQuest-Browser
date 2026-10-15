@@ -5,6 +5,7 @@ import { createSenses } from './senses.js';
 import { createInput } from './input.js';
 import { applyDotColors, createFx, createDigitTicker } from './render.js';
 import { createGame } from './game.js';
+import { createDebugPanel } from './debug.js';
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -26,7 +27,22 @@ const data = {
   progress: stored?.progress ?? createProgress(),
 };
 const settings = data.settings;
-const persist = () => save(data);
+// Guardar escribe cookies de forma síncrona: se agrupa y se hace en un momento libre para no
+// competir con las animaciones del golpe. Al ocultar o cerrar la página se guarda al momento.
+let saveQueued = false;
+const flush = () => {
+  if (!saveQueued) return;
+  saveQueued = false;
+  save(data);
+};
+const persist = () => {
+  if (saveQueued) return;
+  saveQueued = true;
+  if (window.requestIdleCallback) requestIdleCallback(flush, { timeout: 1500 });
+  else setTimeout(flush, 500);
+};
+addEventListener('pagehide', flush);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
 
 applyDotColors();
 const senses = createSenses(settings);
@@ -102,6 +118,8 @@ window.addEventListener('keydown', (e) => {
 }, true);
 window.addEventListener('keyup', (e) => { if (isMinus(e)) ticker.stop(); }, true);
 window.addEventListener('blur', () => ticker.stop());
+
+createDebugPanel({ data, save, game, defaults: DEFAULT_SETTINGS });
 
 applySettings();
 game.showMenu();

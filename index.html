@@ -148,6 +148,39 @@
         <label class="row"><input type="radio" name="layout" value="left"> Izquierda: Q A Z / W S X</label>
         <label class="row"><input type="radio" name="layout" value="right"> Derecha: U J M / I K ,</label>
       </fieldset>
+      <details id="debug" class="debug">
+        <summary>Depuración</summary>
+        <p class="muted">Herramientas para probar el juego. Lo que cambia el progreso recarga la página.</p>
+        <h3>Progreso</h3>
+        <div class="debug-grid">
+          <button type="button" class="chip" data-debug="master-letters">Dominar letras a–j</button>
+          <button type="button" class="chip" data-debug="master-numbers">Dominar números 1–10</button>
+          <button type="button" class="chip" data-debug="all-items">Darme todo el equipo</button>
+          <button type="button" class="chip" data-debug="open-chest">Abrir un cofre (épico más probable)</button>
+        </div>
+        <h3>Combate (en mitad de la Aventura)</h3>
+        <div class="debug-grid">
+          <button type="button" class="chip" data-debug="win-block">Derrotar al enemigo</button>
+          <button type="button" class="chip" data-debug="combo-5">Combo ×5 (probar críticos)</button>
+        </div>
+        <h3>Datos</h3>
+        <div class="debug-grid">
+          <button type="button" class="chip" data-debug="export">Exportar progreso (.json)</button>
+          <button type="button" class="chip" data-debug="import">Importar progreso…</button>
+          <button type="button" class="chip" data-debug="show">Ver datos guardados</button>
+          <button type="button" class="chip" data-debug="reset-settings">Ajustes por defecto</button>
+        </div>
+        <h3>Borrar</h3>
+        <div class="debug-grid">
+          <button type="button" class="chip" data-debug="reset-letters">Borrar letras</button>
+          <button type="button" class="chip" data-debug="reset-numbers">Borrar números</button>
+          <button type="button" class="chip" data-debug="reset-hero">Borrar equipo</button>
+          <button type="button" class="chip danger" data-debug="reset-all">Borrar TODO el progreso</button>
+        </div>
+        <input id="debug-file" type="file" accept="application/json,.json" hidden>
+        <p id="debug-status" class="debug-status" aria-live="polite"></p>
+        <pre id="debug-dump" class="debug-dump" hidden></pre>
+      </details>
       <button class="chip primary" value="close">Cerrar</button>
     </form>
   </dialog>
