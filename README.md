@@ -1,5 +1,7 @@
 # BrailleQuest
 
+**▶ Pruébalo en el navegador: [eljavotm.github.io/BrailleQuest-Browser](https://eljavotm.github.io/BrailleQuest-Browser/)**. No hace falta descargar ni instalar nada.
+
 Un juego de navegador para aprender **braille español** (Grado 1, normativa CBE/ONCE) escribiendo con el teclado. Escribir braille es la mecánica del juego: cada letra bien escrita lanza un hechizo contra el enemigo.
 
 - sesiones cortas, de unos 10 minutos;
@@ -99,3 +101,9 @@ No hay servidor de datos ni servicios de terceros, y los PDF no salen de tu equi
 
 - [docs/REQUISITOS.md](docs/REQUISITOS.md): la visión, el público y los requisitos del juego.
 - [docs/PLANIFICACION.md](docs/PLANIFICACION.md): el bucle de juego, las fases y las decisiones tomadas.
+
+## Créditos y uso
+
+Este proyecto se ha creado con ayuda de inteligencia artificial.
+
+Cualquiera puede usar, copiar, modificar y compartir BrailleQuest libremente con **fines educativos y sin ánimo de lucro**. pdf.js, incluido en `vendor/pdfjs/`, mantiene su propia licencia (Apache-2.0).
