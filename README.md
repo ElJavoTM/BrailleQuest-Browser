@@ -2,8 +2,6 @@
 
 Un juego de navegador para aprender **braille español** (Grado 1, normativa CBE/ONCE) escribiendo con el teclado. Escribir braille es la mecánica del juego: cada letra bien escrita lanza un hechizo contra el enemigo.
 
-Está pensado para adolescentes con TDAH que ven, aunque lo puede usar cualquiera:
-
 - sesiones cortas, de unos 10 minutos;
 - recompensa inmediata;
 - cada punto de la celda tiene su color y su nota;
