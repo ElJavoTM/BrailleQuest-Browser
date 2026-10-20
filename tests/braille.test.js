@@ -43,7 +43,7 @@ test('cada letra tiene una celda distinta y se puede recuperar', () => {
 
 test('charOf devuelve null para celdas sin letra', () => {
   assert.equal(charOf(0), null);
-  assert.equal(charOf(maskFromDots([3, 6])), null);
+  assert.equal(charOf(maskFromDots([5])), null);
 });
 
 test('Unicode coincide con el bloque braille estándar', () => {
@@ -71,4 +71,30 @@ test('números: signo 3-4-5-6 y dígitos = a–j (1 = a, 0 = j)', () => {
   [...'jabcdefghi'].forEach((letter, digit) => assert.equal(digitMask(digit), maskOf(letter), String(digit)));
   assert.equal(numberCells(3).map(unicodeOf).join(''), '⠼⠉');
   assert.equal(numberCells(10).map(unicodeOf).join(''), '⠼⠁⠚');
+});
+
+test('vocales con tilde y ü según la tabla CBE', () => {
+  const expected = {
+    á: [1, 2, 3, 5, 6], é: [2, 3, 4, 6], í: [3, 4], ó: [3, 4, 6], ú: [2, 3, 4, 5, 6], ü: [1, 2, 5, 6],
+  };
+  for (const [letter, dots] of Object.entries(expected)) {
+    assert.deepEqual(dotsFromMask(maskOf(letter)), dots, letter);
+    assert.equal(charOf(maskOf(letter)), letter, letter);
+    assert.ok(LETTER_NAMES[letter], letter);
+  }
+});
+
+test('ninguna celda se repite entre caracteres', () => {
+  const letters = Object.keys(LETTER_NAMES);
+  const masks = letters.map(maskOf);
+  assert.equal(new Set(masks).size, masks.length);
+});
+
+test('signos de puntuación en la tabla', () => {
+  const expected = { '-': [3, 6], ',': [2], '.': [3], '¡': [2, 3, 5], '¿': [2, 6] };
+  for (const [sign, dots] of Object.entries(expected)) {
+    assert.equal(maskOf(sign), maskFromDots(dots), sign);
+    assert.equal(charOf(maskFromDots(dots)), sign, sign);
+    assert.ok(LETTER_NAMES[sign], sign);
+  }
 });

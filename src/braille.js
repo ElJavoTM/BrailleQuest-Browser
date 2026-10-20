@@ -15,13 +15,30 @@ const DOTS_BY_CHAR = {
   u: [1, 3, 6], v: [1, 2, 3, 6], x: [1, 3, 4, 6], y: [1, 3, 4, 5, 6], z: [1, 3, 5, 6],
   // Propias del español
   ñ: [1, 2, 4, 5, 6], w: [2, 4, 5, 6],
+  // Vocales con tilde y ü
+  á: [1, 2, 3, 5, 6], é: [2, 3, 4, 6], í: [3, 4], ó: [3, 4, 6], ú: [2, 3, 4, 5, 6], ü: [1, 2, 5, 6],
+  // Signos. ¡! y ¿? comparten celda: abren y cierran igual.
+  '-': [3, 6], ',': [2], '.': [3], '¡': [2, 3, 5], '¿': [2, 6],
 };
 
 export const LETTER_NAMES = {
   a: 'a', b: 'be', c: 'ce', d: 'de', e: 'e', f: 'efe', g: 'ge', h: 'hache', i: 'i', j: 'jota',
   k: 'ka', l: 'ele', m: 'eme', n: 'ene', ñ: 'eñe', o: 'o', p: 'pe', q: 'cu', r: 'erre', s: 'ese',
   t: 'te', u: 'u', v: 'uve', w: 'uve doble', x: 'equis', y: 'i griega', z: 'zeta',
+  á: 'a con tilde', é: 'e con tilde', í: 'i con tilde', ó: 'o con tilde', ú: 'u con tilde',
+  ü: 'u con diéresis',
+  '-': 'guion', ',': 'coma', '.': 'punto', '¡': 'exclamación', '¿': 'interrogación',
 };
+
+// Signos dichos en una frase; las letras van como «la «a»».
+const SIGN_PHRASES = {
+  '-': 'el guion', ',': 'la coma', '.': 'el punto',
+  '¡': 'la exclamación (¡ o !)', '¿': 'la interrogación (¿ o ?)',
+};
+
+export function theChar(char) {
+  return SIGN_PHRASES[char] ?? `la «${char}»`;
+}
 
 export const LEVELS = [
   { id: 1, name: 'Bosque de los Diez', letters: [...'abcdefghij'] },
@@ -35,6 +52,7 @@ export const GROUPS = [
   { id: 'serie2', name: 'Serie 2', desc: 'k–t · la serie 1 + el punto 3', letters: [...'klmnopqrst'] },
   { id: 'serie3', name: 'Serie 3', desc: 'u v x y z · a–e + los puntos 3 y 6', letters: [...'uvxyz'] },
   { id: 'espanol', name: 'Propias del español', desc: 'ñ y w', letters: ['ñ', 'w'] },
+  { id: 'tildes', name: 'Vocales con tilde', desc: 'á é í ó ú · y la ü', letters: [...'áéíóúü'] },
 ];
 
 export const ALL_LETTERS = GROUPS.flatMap((group) => group.letters);

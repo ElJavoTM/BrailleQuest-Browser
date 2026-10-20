@@ -111,6 +111,24 @@
       <p id="read-controls" class="controls"></p>
     </section>
 
+    <section id="screen-pdf" class="screen">
+      <div class="banner show">Leer un PDF</div>
+      <h2 id="pdf-title"></h2>
+      <div id="pdf-pick" class="pdf-pick">
+        <div id="pdf-options" class="options"></div>
+        <input id="pdf-file" type="file" accept="application/pdf,.pdf" hidden>
+      </div>
+      <div id="pdf-work" class="pdf-work" hidden>
+        <p id="pdf-where" class="muted"></p>
+        <div class="pdf-progress"><div id="pdf-bar" class="pdf-bar"></div></div>
+        <div id="pdf-context" class="pdf-context"></div>
+        <div id="pdf-line" class="pdf-line"></div>
+        <input id="pdf-input" class="pdf-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Escribe aquí la traducción">
+      </div>
+      <p id="pdf-message" class="message"></p>
+      <p id="pdf-controls" class="controls"></p>
+    </section>
+
     <section id="screen-break" class="screen">
       <h2 id="break-title"></h2>
       <div id="break-stats" class="stats"></div>
@@ -158,10 +176,11 @@
           <button type="button" class="chip" data-debug="all-items">Darme todo el equipo</button>
           <button type="button" class="chip" data-debug="open-chest">Abrir un cofre (épico más probable)</button>
         </div>
-        <h3>Combate (en mitad de la Aventura)</h3>
+        <h3>Combate</h3>
         <div class="debug-grid">
           <button type="button" class="chip" data-debug="win-block">Derrotar al enemigo</button>
           <button type="button" class="chip" data-debug="combo-5">Combo ×5 (probar críticos)</button>
+          <button type="button" class="chip" data-debug="boss">Ir al jefe del Bosque</button>
         </div>
         <h3>Datos</h3>
         <div class="debug-grid">

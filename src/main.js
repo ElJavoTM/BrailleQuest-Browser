@@ -113,6 +113,7 @@ const ticker = createDigitTicker(document.getElementById('ticker'));
 const isMinus = (e) => e.key === '-' || e.code === 'NumpadSubtract';
 window.addEventListener('keydown', (e) => {
   if (!isMinus(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.body.dataset.screen === 'pdf') return; // ahí «-» es un guion que se escribe
   e.preventDefault();
   ticker.start();
 }, true);

@@ -1,5 +1,5 @@
 // Calentamiento: sin puntuación ni progreso. Dibujas cualquier celda y el juego te dice qué letra es.
-import { LETTER_NAMES, maskOf, charOf, groupOf } from './braille.js';
+import { LETTER_NAMES, maskOf, charOf, groupOf, theChar } from './braille.js';
 import { createCell, createKeyboard, dotColorsOf } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -71,8 +71,9 @@ export function createWarmup({ senses, fx, resetInput }) {
     tried.add(letter);
     tiles.get(letter)?.classList.add('found');
     markMatch(letter);
-    const where = group.letters.includes(letter) ? '' : ` (está en ${groupOf(letter).name})`;
-    message(`Es la «${letter}»${where}.`, 'good');
+    const other = group.letters.includes(letter) ? null : groupOf(letter);
+    const where = other ? ` (está en ${other.name})` : '';
+    message(`Es ${theChar(letter)}${where}.`, 'good');
     cell.flash('success');
     senses.cell(mask);
     senses.speak(LETTER_NAMES[letter]);

@@ -102,6 +102,10 @@ export function createDebugPanel({ data, save, game, defaults }) {
       $('settings').close();
       if (!game.debug.defeatEnemy()) say('Solo funciona en mitad de un combate de la Aventura.');
     },
+    'boss': () => {
+      $('settings').close();
+      if (!game.debug.startBoss()) say('Aún no hay palabras: domina al menos a–e (o usa «Dominar letras»).');
+    },
     'combo-5': () => {
       $('settings').close();
       if (!game.debug.setCombo(5)) say('Solo funciona en combate.');

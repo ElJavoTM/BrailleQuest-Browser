@@ -1,7 +1,7 @@
 // Escenas del juego: menú, aventura (3 combates con ronda de lectura entre medias),
 // práctica de lectura y calentamiento.
 import {
-  LEVELS, LETTER_NAMES, GROUPS, ALL_LETTERS, maskOf, charOf, unicodeOf, numberCells, digitMask,
+  LEVELS, LETTER_NAMES, GROUPS, ALL_LETTERS, maskOf, charOf, theChar, unicodeOf, numberCells, digitMask,
 } from './braille.js';
 import {
   canUnlock, unlockNext, pickNext, needsHint, recordAnswer, statOf, isMastered, MAX_BOX,
@@ -9,6 +9,8 @@ import {
 } from './learning.js';
 import { createCell, createKeyboard, polygonPoints, dotColorsOf } from './render.js';
 import { createWarmup } from './warmup.js';
+import { createPdfReader } from './pdfreader.js';
+import { WORDS_SERIE1, wordsFor, pickWords } from './words.js';
 import {
   SLOTS, RARITIES, ITEMS, itemOf, createHero, heroLevel, slotUnlocked, openChest, equip, loadout,
 } from './loot.js';
@@ -34,6 +36,12 @@ const ENEMIES = [
   { name: 'Prisma Errante', sides: 4, color: '#4CC9F0' },
   { name: 'Hexágono Sombrío', sides: 6, color: '#B794F6' },
 ];
+
+// Jefe del Bosque: el último combate de la Aventura de letras, si ya hay palabras que escribir.
+const BOSS = { name: 'Guardián del Bosque', sides: 8, color: '#3DDC97', boss: true };
+const BOSS_WORDS = 4;
+const MIN_BOSS_WORDS = 3;
+const BOSS_CHEST_QUALITY = 0.8;
 
 const PRAISE = ['¡Impacto!', '¡Directo!', '¡Limpio!', '¡Bien tirado!', '¡Eso es!', '¡Crítico!'];
 
@@ -109,6 +117,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
   const keyboard = createKeyboard($('keyboard'));
   let readCells = [];
   const warmup = createWarmup({ senses, fx, resetInput: () => input.reset() });
+  const pdfReader = createPdfReader({ senses, fx, createChoiceList, showScreen, setHud });
   let input = null;
   let screen = 'menu';
   let session = null;
@@ -151,6 +160,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
     input?.disable();
     session = null;
     read = null;
+    pdfReader.stop();
     modeList.set([
       {
         name: 'Aventura',
@@ -183,6 +193,14 @@ export function createGame({ data, settings, senses, fx, persist }) {
         name: 'Contar del 1 al 10',
         desc: 'Escribe los números del 1 al 10 en orden, en bucle. Sin puntuación ni enemigos.',
         start: startCounting,
+      },
+      {
+        name: 'Leer un PDF',
+        desc: 'Sube un texto en braille y tradúcelo carácter a carácter. Te corrijo cada línea.',
+        start: () => {
+          input.disable();
+          pdfReader.start();
+        },
       },
     ]);
     showScreen('menu');
@@ -217,6 +235,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
     letters: {
       name: 'Letras', desc: `${level.name}: aprende a escribir de la a a la j.`,
       progress: () => progress, order: level.letters, readKind: 'letters',
+      words: WORDS_SERIE1, // jefe de región
       cellsOf: (item) => [maskOf(item)], spoken: (item) => LETTER_NAMES[item],
       newBanner: 'Letra nueva', newLabel: 'letras nuevas', the: (item) => `la «${item}»`, yours: 'tuya',
     },
@@ -271,15 +290,29 @@ export function createGame({ data, settings, senses, fx, persist }) {
     el.className = `message ${tone}`;
   }
 
+  // Palabras que el jugador ya puede escribir: solo con letras escritas bien al menos una vez.
+  function bossWords() {
+    const { words } = session.subject;
+    return words ? wordsFor(words, readablePool(sp())) : [];
+  }
+
+  const isBossBlock = (n) => n === BLOCKS_PER_SESSION - 1 && !session.practice
+    && bossWords().length >= MIN_BOSS_WORDS;
+
   function startBlock() {
-    const enemy = ENEMIES[session.block % ENEMIES.length];
-    block = { enemy, hp: HITS_PER_BLOCK, firstTry: 0, answered: 0 };
+    const boss = isBossBlock(session.block);
+    const enemy = boss ? BOSS : ENEMIES[session.block % ENEMIES.length];
+    const words = boss ? pickWords(bossWords(), BOSS_WORDS) : null;
+    const hp = boss ? words.length : HITS_PER_BLOCK;
+    block = { enemy, hp, maxHp: hp, boss, words, firstTry: 0, answered: 0 };
     applyAura();
     $('enemy-shape').setAttribute('points', polygonPoints(enemy.sides, 46));
     $('enemy').style.setProperty('--enemy', enemy.color);
     $('enemy').classList.remove('defeated');
+    $('enemy').classList.toggle('boss', boss);
     $('enemy-name').textContent = enemy.name;
-    setHud(`${session.subject.name} · Bloque ${session.block + 1}/${BLOCKS_PER_SESSION}`);
+    setHud(boss ? `${session.subject.name} · ¡Jefe!` : `${session.subject.name} · Bloque ${session.block + 1}/${BLOCKS_PER_SESSION}`);
+    if (boss) senses.speak(`${enemy.name}. Escribe palabras para derrotarlo.`);
     renderHp();
     renderCombo();
     showScreen('battle');
@@ -288,7 +321,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
   }
 
   function renderHp() {
-    $('hp-fill').style.transform = `scaleX(${block.hp / HITS_PER_BLOCK})`;
+    $('hp-fill').style.transform = `scaleX(${block.hp / block.maxHp})`;
   }
 
   function renderCombo() {
@@ -307,7 +340,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
       if (!unlocked) el.classList.add('locked');
       else if (isMastered(stats, item)) el.classList.add('mastered');
       el.style.setProperty('--fill', unlocked ? statOf(stats, item).box / MAX_BOX : 0);
-      if (turn?.item === item) el.classList.add('current');
+      if (currentLetter() === item) el.classList.add('current');
       return el;
     }));
   }
@@ -327,16 +360,51 @@ export function createGame({ data, settings, senses, fx, persist }) {
   // ---------- Aventura: turnos ----------
 
   const targetOf = (t) => t.cells[t.pos];
+  // En las palabras del jefe cada letra tiene su propia pista (si es nueva o tras fallarla).
+  const currentLetter = () => (turn?.word ? turn.item[turn.pos] : turn?.item);
+  const hintNow = (t) => (t.word ? t.posHinted || needsHint(progress, t.item[t.pos]) : t.hinted);
+
+  // La palabra del jefe, con lo ya escrito en verde y la letra actual resaltada.
+  function renderWord() {
+    $('target').innerHTML = [...turn.item].map((letter, i) => {
+      const cls = i < turn.pos ? 'done' : i === turn.pos ? 'current' : '';
+      return `<span class="${cls}">${letter}</span>`;
+    }).join('');
+  }
 
   // Qué va en la celda actual, dicho en palabras (para los números).
   function describeCell(t) {
+    if (t.word) return `la «${t.item[t.pos]}»`;
     if (t.cells.length < 2) return '';
     if (t.pos === 0) return 'el signo de número (puntos 3-4-5-6)';
     const digit = t.item[t.pos - 1];
     return `el ${digit} (como la «${charOf(t.cells[t.pos])}»)`;
   }
 
+  function nextBossTurn() {
+    const word = block.words[block.maxHp - block.hp];
+    turn = {
+      item: word, cells: [...word].map(maskOf), pos: 0, word: true,
+      attempted: false, posAttempted: false, posHinted: false,
+    };
+    $('target').classList.add('word');
+    renderWord();
+    $('target').classList.remove('pop');
+    void $('target').offsetWidth;
+    $('target').classList.add('pop');
+    $('banner').textContent = `Jefe · palabra ${block.maxHp - block.hp + 1}/${block.maxHp}`;
+    $('banner').classList.add('show');
+    message(`Escribe «${word}» letra a letra.`, 'info');
+    senses.speak(word);
+    renderCrystals();
+    renderSequence();
+    drawCell(0);
+    input.enable();
+  }
+
   function nextTurn() {
+    if (block?.boss) return nextBossTurn();
+    $('target').classList.remove('word');
     const { subject } = session;
     const stats = sp();
     if (session.practice) {
@@ -408,7 +476,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
   }
 
   function drawCell(mask, marks) {
-    const ghost = turn?.hinted ? targetOf(turn) : 0;
+    const ghost = turn && hintNow(turn) ? targetOf(turn) : 0;
     cell.set(mask, marks ?? { ghost });
     keyboard.set(mask, marks ?? { ghost });
   }
@@ -430,21 +498,33 @@ export function createGame({ data, settings, senses, fx, persist }) {
 
   // Una celda bien en un elemento de varias: se avanza a la siguiente sin lanzar el hechizo.
   function onCellDone(mask) {
+    if (turn.word) recordLetter();
     turn.pos += 1;
     cell.flash('success');
     senses.cell(mask);
     fx.burstAt(cell.el, dotColorsOf(mask), 10);
     message(`¡Bien! Ahora ${describeCell(turn)}.`, 'good');
+    if (turn.word) renderWord();
     renderSequence();
     drawCell(0);
+  }
+
+  // Palabras del jefe: cada letra cuenta para el repaso espaciado (solo su primer intento).
+  function recordLetter() {
+    if (!turn.posAttempted) {
+      recordAnswer(progress, turn.item[turn.pos], { correct: true, hinted: hintNow(turn) });
+    }
+    turn.posAttempted = false;
+    turn.posHinted = false;
   }
 
   function onCorrect(mask) {
     input.disable();
     if (session.practice) return onCountCorrect(mask);
     const { item } = turn;
+    if (turn.word) recordLetter();
     if (!turn.attempted) {
-      recordAnswer(sp(), item, { correct: true, hinted: turn.hinted });
+      if (!turn.word) recordAnswer(sp(), item, { correct: true, hinted: turn.hinted });
       session.firstTry += 1;
       session.answered += 1;
       block.firstTry += 1;
@@ -461,19 +541,23 @@ export function createGame({ data, settings, senses, fx, persist }) {
     renderSequence();
     cell.flash('success');
     senses.success(mask, combo);
-    senses.speak(session.subject.spoken(item));
+    senses.speak(turn.word ? item : session.subject.spoken(item));
     senses.vibrate([25, 30, 25]);
     // Más combo, hechizo más fuerte: proyectiles más grandes, más chispas y más temblor.
     const power = 1 + Math.min(combo, 10) * 0.08;
     const gear = loadout(hero, heroLvl());
     const colors = turn.cells.flatMap(dotColorsOf);
     const hitCombo = combo;
+    // Una palabra del jefe siempre pega como un crítico, con la palabra como daño.
+    const isWord = Boolean(turn.word);
+    const label = isWord ? `«${item}»` : null;
+    if (isWord) renderWord();
     fx.spell(cell.el, $('enemy-shape'), colors, {
-      power,
+      power: isWord ? power + 0.4 : power,
       foco: gear.foco,
-      onHit: () => hitEnemy(hitCombo, { colors, power, sello: gear.sello }),
+      onHit: () => hitEnemy(hitCombo, { colors, power, sello: gear.sello, crit: isWord, label }),
     });
-    const praise = turn.orderLast ? '¡Cuenta completa!' : turn.isReview ? '¡Revancha ganada!' : PRAISE[combo % PRAISE.length];
+    const praise = isWord ? `¡«${item}» escrita!` : turn.orderLast ? '¡Cuenta completa!' : turn.isReview ? '¡Revancha ganada!' : PRAISE[combo % PRAISE.length];
     message(combo >= 3 ? `${praise} Combo ×${combo}` : praise, 'good');
     renderHp();
     renderCombo();
@@ -503,10 +587,18 @@ export function createGame({ data, settings, senses, fx, persist }) {
     input.disable();
     const target = targetOf(turn);
     const multi = turn.cells.length > 1;
-    const answeredAs = multi ? null : charOf(mask);
+    const answeredAs = multi && !turn.word ? null : charOf(mask);
+    if (turn.word && !turn.posAttempted) {
+      // Jefe: el fallo cuenta para la letra concreta, y la palabra deja de ir «a la primera».
+      recordAnswer(progress, turn.item[turn.pos], { correct: false, hinted: hintNow(turn), answeredAs });
+      turn.posAttempted = true;
+      persist();
+    }
     if (!turn.attempted && !session.practice) {
-      recordAnswer(sp(), turn.item, { correct: false, hinted: turn.hinted, answeredAs });
-      scheduleReview(session.review, turn.item);
+      if (!turn.word) {
+        recordAnswer(sp(), turn.item, { correct: false, hinted: turn.hinted, answeredAs });
+        scheduleReview(session.review, turn.item);
+      }
       session.answered += 1;
       if (block) block.answered += 1;
       persist();
@@ -520,10 +612,14 @@ export function createGame({ data, settings, senses, fx, persist }) {
     cell.flash('shake');
     senses.error();
     senses.vibrate(80);
-    if (multi) message(`Aquí va ${describeCell(turn)}. Fíjate en los puntos que brillan.`, 'bad');
+    if (turn.word) {
+      message(answeredAs
+        ? `Eso es ${theChar(answeredAs)}. Aquí va ${describeCell(turn)}: fíjate en los puntos que brillan.`
+        : `Aquí va ${describeCell(turn)}. Fíjate en los puntos que brillan.`, 'bad');
+    } else if (multi) message(`Aquí va ${describeCell(turn)}. Fíjate en los puntos que brillan.`, 'bad');
     else {
       message(answeredAs
-        ? `Eso es la «${answeredAs}». Fíjate en los puntos que brillan.`
+        ? `Eso es ${theChar(answeredAs)}. Fíjate en los puntos que brillan.`
         : 'Casi. Fíjate en los puntos que brillan.', 'bad');
     }
 
@@ -531,6 +627,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
     turn.retry = () => {
       turn.retry = null;
       turn.hinted = true;
+      turn.posHinted = true;
       drawCell(0);
       input.enable();
     };
@@ -552,8 +649,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
 
   // Impacto en dos tiempos: al llegar el hechizo el enemigo se congela y flashea; al acabar el
   // congelado salen a la vez el retroceso (CSS), el estallido, el sello, el temblor y el daño.
-  function hitEnemy(hitCombo, { colors, power, sello }) {
-    const crit = hitCombo >= 5;
+  function hitEnemy(hitCombo, { colors, power, sello, crit: forceCrit = false, label = null }) {
+    const crit = forceCrit || hitCombo >= 5;
     const kind = crit ? 'crit' : 'normal';
     const enemy = $('enemy');
     enemy.classList.toggle('crit', crit);
@@ -566,7 +663,7 @@ export function createGame({ data, settings, senses, fx, persist }) {
       restart($('screen-battle'), crit ? 'quake-big' : 'quake');
       const pop = document.createElement('div');
       pop.className = `damage${crit ? ' crit' : ''}`;
-      pop.textContent = crit ? `¡CRÍTICO! ×${hitCombo}` : hitCombo >= 3 ? `−1 ×${hitCombo}` : '−1';
+      pop.textContent = label ?? (crit ? `¡CRÍTICO! ×${hitCombo}` : hitCombo >= 3 ? `−1 ×${hitCombo}` : '−1');
       enemy.append(pop);
       setTimeout(() => pop.remove(), 900);
     }, FREEZE_MS[kind]);
@@ -579,10 +676,12 @@ export function createGame({ data, settings, senses, fx, persist }) {
     fx.burstAt($('enemy-shape'), [block.enemy.color, '#ffffff'], 80);
     restart($('screen-battle'), 'quake-big');
     senses.victory();
-    message(`${block.enemy.name} derrotado.`, 'good');
+    message(block.boss ? `¡${block.enemy.name} derrotado! El Bosque es tuyo… por hoy.` : `${block.enemy.name} derrotado.`, 'good');
+    if (block.boss) senses.speak(`${block.enemy.name} derrotado`);
     // Cofre: siempre un objeto nuevo; acertar a la primera mejora la rareza.
     // levelSeen = nivel al empezar este combate, para anunciar si se ha subido.
-    const quality = block.answered ? block.firstTry / block.answered : 0;
+    const played = block.answered ? block.firstTry / block.answered : 0;
+    const quality = block.boss ? Math.max(played, BOSS_CHEST_QUALITY) : played; // el jefe da mejor cofre
     session.drop = { item: openChest(hero, quality), levelBefore: session.levelSeen };
     session.levelSeen = heroLvl();
     persist();
@@ -911,9 +1010,8 @@ export function createGame({ data, settings, senses, fx, persist }) {
     $('break-title').textContent = `Bloque ${session.block}/${BLOCKS_PER_SESSION} completado`;
     $('break-stats').innerHTML = statsHtml();
     $('break-loot').innerHTML = lootHtml();
-    $('break-continue').innerHTML = shouldRead()
-      ? '<kbd>Enter</kbd> ronda de lectura · <kbd>Esc</kbd> terminar por hoy'
-      : '<kbd>Enter</kbd> siguiente bloque · <kbd>Esc</kbd> terminar por hoy';
+    const next = shouldRead() ? 'ronda de lectura' : isBossBlock(session.block) ? '¡al jefe!' : 'siguiente bloque';
+    $('break-continue').innerHTML = `<kbd>Enter</kbd> ${next} · <kbd>Esc</kbd> terminar por hoy`;
     showScreen('break');
   }
 
@@ -928,7 +1026,9 @@ export function createGame({ data, settings, senses, fx, persist }) {
   // ---------- Teclas de navegación ----------
 
   window.addEventListener('keydown', (e) => {
-    if (document.querySelector('dialog[open]') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (document.querySelector('dialog[open]') || e.metaKey || e.ctrlKey) return;
+    // Alt (Opción en Mac) escribe caracteres como «ñ» o «¿» en algunos teclados: vale al leer un PDF.
+    if (e.altKey && screen !== 'pdf') return;
     const esc = e.code === 'Escape';
     switch (screen) {
       case 'menu':
@@ -944,6 +1044,10 @@ export function createGame({ data, settings, senses, fx, persist }) {
         break;
       case 'warmup':
         if (esc) showGroups();
+        break;
+      case 'pdf':
+        if (esc) showMenu();
+        else pdfReader.handleKey(e);
         break;
       case 'battle':
         if (esc) showMenu();
@@ -1020,6 +1124,19 @@ export function createGame({ data, settings, senses, fx, persist }) {
       block.hp = 0;
       renderHp();
       defeatEnemy();
+      return true;
+    },
+    // Empieza una Aventura de letras directamente en el combate contra el jefe.
+    startBoss() {
+      session = null;
+      startSession(SUBJECTS.letters);
+      if (bossWords().length < MIN_BOSS_WORDS) {
+        showMenu();
+        return false;
+      }
+      token += 1;
+      session.block = BLOCKS_PER_SESSION - 1;
+      startBlock();
       return true;
     },
     setCombo(n) {
